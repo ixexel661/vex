@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="UTF-8"?><config><server host="localhost" port="8080"><timeout>30</timeout><!-- seconds --><tls enabled="false"/></server><users><user name="ada" role="admin"/><user name="bob" role="viewer"/></users></config>

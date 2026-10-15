@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A small catalog to try out vex -->
+<catalog xmlns:media="https://example.com/media">
+  <book id="bk101" available="true">
+    <author>Gambardella, Matthew</author>
+    <title>XML Developer's Guide</title>
+    <price currency="EUR">44.95</price>
+    <description><![CDATA[Creating applications with XML & <tags>.]]></description>
+  </book>
+  <book id="bk102">
+    <author>Ralls, Kim</author>
+    <title>Midnight Rain &amp; Other Stories</title>
+    <media:cover src="rain.png"/>
+  </book>
+</catalog>
