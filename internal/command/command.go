@@ -15,6 +15,7 @@ type Context interface {
 	Notify(message string)
 	Ask(question string, choices ...Choice)
 	OpenSearch()
+	OpenSettings()
 	Quit()
 }
 

@@ -32,9 +32,12 @@ func newModel(t *testing.T, content string) (*Model, string) {
 	return newModelWithTheme(t, content, theme.Theme{})
 }
 
+// newModelWithTheme keeps the document, the config file and the themes
+// directory together in a temporary directory.
 func newModelWithTheme(t *testing.T, content string, th theme.Theme) (*Model, string) {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "test.xml")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test.xml")
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -42,8 +45,15 @@ func newModelWithTheme(t *testing.T, content string, th theme.Theme) (*Model, st
 	if err != nil {
 		t.Fatal(err)
 	}
-	matchers := []search.Matcher{search.Text{}, search.Fuzzy{}}
-	m := New(doc, command.NewRegistry(command.Builtins()...), keymap.Default(), matchers, config.Default(), th)
+	m := New(doc, Setup{
+		Commands:   command.NewRegistry(command.Builtins()...),
+		Keys:       keymap.Default(),
+		Matchers:   []search.Matcher{search.Text{}, search.Fuzzy{}},
+		Config:     config.Default(),
+		ConfigPath: filepath.Join(dir, "config.toml"),
+		Theme:      th,
+		Themes:     theme.NewStore(filepath.Join(dir, "themes"), os.DirFS("../../themes")),
+	})
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	return m, path
 }
@@ -156,7 +166,7 @@ func TestValidationReportsErrors(t *testing.T) {
 
 func TestHints(t *testing.T) {
 	m, _ := newModel(t, "<a/>")
-	if got, want := m.hints(), "i insert · ctrl+s save · f format · ctrl+f search · q quit"; got != want {
+	if got, want := m.hints(), "i insert · ctrl+s save · f format · ctrl+f search · s settings · q quit"; got != want {
 		t.Errorf("hints = %q, want %q", got, want)
 	}
 }

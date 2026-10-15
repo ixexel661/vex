@@ -1,0 +1,49 @@
+# basic uses the 16 colors of the terminal, so it follows the terminal's color
+# scheme and works on light and dark backgrounds.
+#
+# A style can set a foreground (fg) and a background (bg) color and be bold,
+# italic or underline. A color is a name (black, red, green, yellow, blue,
+# magenta, cyan, white, or one of them with bright- in front, like
+# bright-black), a number from 0 to 255, or a hex color like "#ff8700".
+#
+# For a theme of your own, copy this file in the same directory, e.g. to
+# dark.toml, and pick it in vex with s. A theme only needs the styles it
+# changes, the others come from the basic theme built into vex.
+
+# Highlighted text
+[syntax]
+plain         = {}
+punctuation   = { fg = "bright-black" }
+tag           = { fg = "blue" }
+attribute     = { fg = "cyan" }
+string        = { fg = "green" }
+comment       = { fg = "bright-black", italic = true }
+meta          = { fg = "magenta" }
+entity        = { fg = "yellow" }
+cdata         = { fg = "yellow" }
+match         = { fg = "black", bg = "yellow" }
+current-match = { fg = "bright-white", bg = "magenta", bold = true }
+
+# Everything around the text
+[ui]
+line-number         = { fg = "bright-black" }
+current-line-number = { fg = "yellow" }
+filler              = { fg = "bright-black" }
+
+status-bar  = { fg = "bright-white", bg = "bright-black" }
+normal-mode = { fg = "black", bg = "blue", bold = true }
+insert-mode = { fg = "black", bg = "green", bold = true }
+valid       = { fg = "bright-green", bg = "bright-black" }
+invalid     = { fg = "bright-red", bg = "bright-black", bold = true }
+
+message  = {}
+error    = { fg = "red" }
+question = { fg = "yellow", bold = true }
+hint     = { fg = "bright-black" }
+
+search-mode  = { fg = "black", bg = "magenta", bold = true }
+selected     = { fg = "bright-white", bg = "bright-black" }
+matched-rune = { fg = "yellow", bold = true }
+
+popup-border = { fg = "bright-black" }
+popup-title  = { bold = true }

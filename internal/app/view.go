@@ -20,14 +20,19 @@ func (m *Model) View() tea.View {
 	if height := m.listHeight(); height > 0 {
 		content += "\n" + line.Render(m.matchList(height))
 	}
-	v.SetContent(content + "\n" + line.Render(m.statusBar()) + "\n" + line.Render(m.messageLine()))
+	content += "\n" + line.Render(m.statusBar()) + "\n" + line.Render(m.messageLine())
+	if m.settings != nil {
+		content = m.overlay(content, m.settingsBox())
+	}
+	v.SetContent(content)
 	v.Cursor = m.cursor()
 	return v
 }
 
-// cursor stands right after the query while searching, otherwise in the
-// text.
 func (m *Model) cursor() *tea.Cursor {
+	if m.settings != nil {
+		return nil
+	}
 	if m.searching {
 		c := tea.NewCursor(min(lipgloss.Width(m.searchInput()), m.width-1), m.height-1)
 		c.Shape = tea.CursorBar

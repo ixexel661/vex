@@ -10,8 +10,6 @@ import (
 	"github.com/ixexel661/vex/internal/search"
 )
 
-// OpenSearch shows the search bar with the query of the last search
-// selected: typing replaces it, the arrow keys and enter use it.
 func (m *Model) OpenSearch() {
 	m.searching = true
 	m.replaceQuery = m.search.Query() != ""
@@ -19,8 +17,6 @@ func (m *Model) OpenSearch() {
 	m.showMatch()
 }
 
-// searchKey handles a key while the search bar is open. Like the keys of a
-// dialog, these belong to the input field and are not part of the keymap.
 func (m *Model) searchKey(msg tea.KeyPressMsg) {
 	switch msg.String() {
 	case "enter":
@@ -58,8 +54,6 @@ func (m *Model) deleteInSearch() {
 	})
 }
 
-// editQuery changes the query and searches again. A query that is still
-// selected is replaced, so the change applies to an empty one.
 func (m *Model) editQuery(change func(query string) string) {
 	query := m.search.Query()
 	if m.replaceQuery {
@@ -70,8 +64,6 @@ func (m *Model) editQuery(change func(query string) string) {
 	m.showMatch()
 }
 
-// closeSearch hides the search bar. If the search is accepted, the cursor
-// stays at the match, otherwise it goes back to where the search started.
 func (m *Model) closeSearch(accept bool) {
 	if !accept {
 		m.editor.MoveTo(m.search.Origin())
@@ -80,10 +72,6 @@ func (m *Model) closeSearch(accept bool) {
 	m.editor.SetMarks(nil)
 }
 
-// showMatch marks the matches in the text and moves the cursor to the
-// selected one. Ranked matches are listed apart from the text, so of those
-// only the selected one is marked. Without matches, the cursor goes back to
-// where the search started.
 func (m *Model) showMatch() {
 	selected := m.search.Selected()
 	if selected < 0 {

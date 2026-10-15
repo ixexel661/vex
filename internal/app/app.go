@@ -13,15 +13,30 @@ import (
 	"github.com/ixexel661/vex/internal/theme"
 )
 
-// Model is the Bubble Tea model of vex. It routes keys to commands and lays
-// out the editor, the list of search matches, the status bar and the message
-// line.
+// Setup is what the model is built from. main.go fills it in.
+type Setup struct {
+	Commands *command.Registry
+	Keys     *keymap.Keymap
+	// Matchers are the search modes. Tab switches between them in this
+	// order, the first is the default.
+	Matchers   []search.Matcher
+	Config     config.Config
+	ConfigPath string // where the settings popup saves the config
+	Theme      theme.Theme
+	Themes     *theme.Store
+	// Warning is shown in the message line at the start, e.g. a broken
+	// config file.
+	Warning error
+}
+
 type Model struct {
-	editor   *editor.Editor
-	commands *command.Registry
-	keys     *keymap.Keymap
-	cfg      config.Config
-	theme    theme.Theme
+	editor     *editor.Editor
+	commands   *command.Registry
+	keys       *keymap.Keymap
+	cfg        config.Config
+	configPath string
+	theme      theme.Theme
+	themes     *theme.Store
 
 	mode          mode.Mode
 	width, height int
@@ -29,7 +44,8 @@ type Model struct {
 	dialog        *dialog
 	search        *search.Session
 	searching     bool
-	replaceQuery  bool // the query is still selected from the last search
+	replaceQuery  bool
+	settings      *settingsPopup
 	validation    validation
 	quitting      bool
 }
@@ -39,16 +55,19 @@ type message struct {
 	isError bool
 }
 
-func New(doc *document.Document, commands *command.Registry, keys *keymap.Keymap, matchers []search.Matcher, cfg config.Config, th theme.Theme) *Model {
+func New(doc *document.Document, s Setup) *Model {
 	m := &Model{
-		editor:     editor.New(doc, cfg, th),
-		commands:   commands,
-		keys:       keys,
-		cfg:        cfg,
-		theme:      th,
-		search:     search.NewSession(doc.Buffer, matchers),
+		editor:     editor.New(doc, s.Config, s.Theme),
+		commands:   s.Commands,
+		keys:       s.Keys,
+		cfg:        s.Config,
+		configPath: s.ConfigPath,
+		theme:      s.Theme,
+		themes:     s.Themes,
+		search:     search.NewSession(doc.Buffer, s.Matchers),
 		validation: validation{version: -1},
 	}
+	m.reportError(s.Warning)
 	m.validate()
 	return m
 }

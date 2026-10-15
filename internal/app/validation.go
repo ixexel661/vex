@@ -11,8 +11,6 @@ type validation struct {
 	err     error
 }
 
-// validate checks the document after it changed. It waits for normal mode,
-// because while typing the document is often invalid for a moment.
 func (m *Model) validate() {
 	doc := m.editor.Document()
 	if m.mode != mode.Normal || doc.Buffer.Version() == m.validation.version {

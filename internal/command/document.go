@@ -24,7 +24,7 @@ func formatDocument(ctx Context) error {
 		return fmt.Errorf("%s files cannot be formatted", doc.Type.Name)
 	}
 	text := doc.Buffer.Text()
-	formatted, err := doc.Type.Formatter.Format(text, ctx.Config().Indent)
+	formatted, err := doc.Type.Formatter.Format(text, ctx.Config().Format)
 	if err != nil {
 		return fmt.Errorf("cannot format: %w", err)
 	}

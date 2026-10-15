@@ -26,6 +26,7 @@ func Default() *Keymap {
 		{"ctrl+s", "document.save"},
 		{"f", "document.format"},
 		{"ctrl+f", "search.open"},
+		{"s", "settings.open"},
 		{"q", "app.quit"},
 		{"ctrl+c", "app.quit"},
 	}

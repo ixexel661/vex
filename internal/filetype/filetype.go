@@ -3,6 +3,7 @@ package filetype
 import (
 	"fmt"
 
+	"github.com/ixexel661/vex/internal/config"
 	"github.com/ixexel661/vex/internal/highlight"
 )
 
@@ -17,7 +18,7 @@ type Type struct {
 }
 
 type Formatter interface {
-	Format(src, indent string) (string, error)
+	Format(src string, opts config.Format) (string, error)
 }
 
 type Validator interface {

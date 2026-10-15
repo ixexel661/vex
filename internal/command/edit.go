@@ -12,6 +12,6 @@ func editCommands() []Command {
 }
 
 func indent(ctx Context) error {
-	ctx.Editor().InsertText(ctx.Config().Indent)
+	ctx.Editor().InsertText(string(ctx.Config().Format.Indent))
 	return nil
 }

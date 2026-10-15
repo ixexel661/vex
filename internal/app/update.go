@@ -26,10 +26,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// layout gives the editor the rows that the list of search matches, the
-// status bar and the message line leave free.
 func (m *Model) layout() {
-	m.editor.SetSize(m.width, m.height-2-m.listHeight())
+	m.editor.SetSize(m.width, m.editorHeight())
+}
+
+// editorHeight leaves room for the match list, the status bar and the
+// message line.
+func (m *Model) editorHeight() int {
+	return m.height - 2 - m.listHeight()
 }
 
 func (m *Model) handleKey(msg tea.KeyPressMsg) {
@@ -41,6 +45,10 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) {
 	}
 	if m.searching {
 		m.searchKey(msg)
+		return
+	}
+	if m.settings != nil {
+		m.settingsKey(key)
 		return
 	}
 	if name, ok := m.keys.Lookup(m.mode, key); ok {
@@ -77,6 +85,7 @@ func (m *Model) run(name string) {
 
 func (m *Model) reportError(err error) {
 	if err != nil {
-		m.message = message{text: err.Error(), isError: true}
+		// Joined errors come one per line, the message line has only one.
+		m.message = message{text: strings.ReplaceAll(err.Error(), "\n", "; "), isError: true}
 	}
 }

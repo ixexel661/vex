@@ -1,9 +1,13 @@
 package main
 
 import (
+	"embed"
+	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -17,6 +21,9 @@ import (
 	"github.com/ixexel661/vex/internal/search"
 	"github.com/ixexel661/vex/internal/theme"
 )
+
+//go:embed themes/*.toml
+var builtinThemes embed.FS
 
 func main() {
 	flag.Usage = func() {
@@ -41,10 +48,31 @@ func run(path string) error {
 	if err != nil {
 		return err
 	}
-	commands := command.NewRegistry(command.Builtins()...)
-	// Tab switches between the matchers in this order, the first is the default.
-	matchers := []search.Matcher{search.Text{}, search.Fuzzy{}}
-	model := app.New(doc, commands, keymap.Default(), matchers, config.Default(), theme.Default())
+	dir, err := config.Dir()
+	if err != nil {
+		return err
+	}
+	builtin, err := fs.Sub(builtinThemes, "themes")
+	if err != nil {
+		return err
+	}
+	configPath := filepath.Join(dir, "config.toml")
+	themes := theme.NewStore(filepath.Join(dir, "themes"), builtin)
+	// The first start creates the files, so they are easy to find and change.
+	installErr := errors.Join(config.Install(configPath), themes.Install())
+	cfg, configErr := config.Load(configPath)
+	th, themeErr := themes.Load(cfg.Theme)
+
+	model := app.New(doc, app.Setup{
+		Commands:   command.NewRegistry(command.Builtins()...),
+		Keys:       keymap.Default(),
+		Matchers:   []search.Matcher{search.Text{}, search.Fuzzy{}},
+		Config:     cfg,
+		ConfigPath: configPath,
+		Theme:      th,
+		Themes:     themes,
+		Warning:    errors.Join(installErr, configErr, themeErr),
+	})
 	_, err = tea.NewProgram(model).Run()
 	return err
 }

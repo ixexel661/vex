@@ -11,16 +11,13 @@ import (
 	"github.com/ixexel661/vex/internal/mode"
 )
 
-// statusBar shows the mode, the file, its validity, its type and the cursor
-// position. Each part is styled on its own, because a style reset inside a
-// styled string would end the bar's background early.
 func (m *Model) statusBar() string {
 	doc := m.editor.Document()
 	cursor := m.editor.Cursor()
 
-	badge := m.theme.NormalMode.Render(m.mode.String())
+	modeBadge := badge(m.theme.NormalMode, m.mode.String())
 	if m.mode == mode.Insert {
-		badge = m.theme.InsertMode.Render(m.mode.String())
+		modeBadge = badge(m.theme.InsertMode, m.mode.String())
 	}
 	name := " " + doc.Name()
 	if doc.Modified() {
@@ -29,9 +26,14 @@ func (m *Model) statusBar() string {
 	validity := m.validity()
 	position := fmt.Sprintf("  %s  Ln %d, Col %d ", doc.Type.Name, cursor.Row+1, cursor.Col+1)
 
-	used := lipgloss.Width(badge) + lipgloss.Width(name) + lipgloss.Width(validity) + lipgloss.Width(position)
+	used := lipgloss.Width(modeBadge) + lipgloss.Width(name) + lipgloss.Width(validity) + lipgloss.Width(position)
 	gap := strings.Repeat(" ", max(m.width-used, 1))
-	return badge + m.theme.StatusBar.Render(name+gap) + validity + m.theme.StatusBar.Render(position)
+	return modeBadge + m.theme.StatusBar.Render(name+gap) + validity + m.theme.StatusBar.Render(position)
+}
+
+// badge shows text as a label with a space on each side.
+func badge(style lipgloss.Style, text string) string {
+	return style.Render(" " + text + " ")
 }
 
 func (m *Model) validity() string {

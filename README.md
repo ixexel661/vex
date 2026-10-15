@@ -28,6 +28,7 @@ well-formed XML and, if not, the line of the first error.
 |--------|---------------------------------------|-------------------------------------------|
 | normal | `i`                                   | start editing                             |
 | normal | `f`                                   | format (re-indent) the document           |
+| normal | `s`                                   | settings                                  |
 | normal | `q`, `ctrl+c`                         | quit, asks first if there are changes     |
 | both   | `ctrl+s`                              | save                                      |
 | both   | `ctrl+f`                              | search                                    |
@@ -36,8 +37,9 @@ well-formed XML and, if not, the line of the first error.
 | insert | `esc`, `ctrl+c`                       | stop editing                              |
 | insert | `enter`, `backspace`, `delete`, `tab` | new line (keeps indentation), delete, indent |
 
-Formatting only changes whitespace between tags. Elements that contain text
-are kept exactly as they are.
+Formatting changes the whitespace between tags and, if the settings ask for
+it, wraps long tags and shortens empty elements. Text is kept exactly as it
+is.
 
 ### Search
 
@@ -60,10 +62,65 @@ and `enter` use it.
 | `esc`, `ctrl+c` | cancel, the cursor goes back              |
 | `tab`           | switch between text and fuzzy search      |
 
+### Settings
+
+`s` opens the settings over the text. Every change shows at once.
+
+| Keys              | Action                                  |
+|-------------------|-----------------------------------------|
+| `up`/`down`       | select a setting                        |
+| `left`/`right`    | change it                               |
+| `enter`           | save the settings to the config file    |
+| `esc`, `ctrl+c`   | cancel, the settings go back            |
+
+The config file is `~/.config/vex/config.toml` (on macOS
+`~/Library/Application Support/vex`, on Windows `%AppData%\vex`). vex
+creates it on the first start, and you can also change it by hand:
+
+```toml
+theme = "basic"
+tab-width = 4                # columns of a tab character
+
+[format]
+indent = "2 spaces"          # for formatting and the tab key, or "tabs"
+self-close-empty = false     # <a></a> becomes <a/>
+keep-blank-lines = false     # single blank lines between elements stay
+wrap-tags-longer-than = 0    # each attribute on its own line, 0 = never
+```
+
+Saving from the settings rewrites the file, so comments in it get lost. If
+the file has a problem, vex says so when it starts and uses the defaults
+for what it cannot read. The font is the one of your terminal.
+
+### Themes
+
+The colors come from the themes in `~/.config/vex/themes`. vex puts
+`basic.toml` there, which uses the 16 colors of the terminal, and the
+settings offer every `.toml` file in that directory. A theme has a
+`[syntax]` table for highlighted text and a `[ui]` table for everything
+around it:
+
+```toml
+[syntax]
+tag = { fg = "blue" }
+comment = { fg = "bright-black", italic = true }
+
+[ui]
+status-bar = { fg = "#ffffff", bg = "238" }
+```
+
+A style can have a foreground (`fg`) and a background (`bg`) color and be
+`bold`, `italic` or `underline`. A color is a name (`black`, `red`,
+`green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, each also with
+`bright-` in front), a number from 0 to 255 or a hex color. For a theme of
+your own, copy `basic.toml` and change it. It only needs the styles it
+changes, the others come from the basic theme built into vex.
+
 ## Project layout
 
 ```
 main.go                 wires everything together
+themes/                 themes built into vex
 internal/
   app/                  Bubble Tea model: keys -> commands, layout, dialogs
   command/              named commands and the Context they run against
@@ -76,7 +133,8 @@ internal/
   search/               text and fuzzy search
   filetype/             file type registry
     xml/                XML highlighter, formatter and validator
-  config/, theme/       settings and colors
+  config/               settings and the config file
+  theme/                styles and theme files
 ```
 
 ## Extending vex
@@ -94,6 +152,14 @@ returning a `filetype.Type`. Only fill in what the format supports
 for regular expressions or XPath, and add it to the matchers in `main.go`.
 `tab` switches through them in that order. The matches of a matcher that
 ranks them are listed, the others are marked in the text.
+
+**A new setting:** add a field with a `toml` tag to `config.Config` and its
+default to `config.Default()`. To change it in the settings, add a row to
+`settingRows()` in `internal/app/settings.go`.
+
+**A new style:** add a field to `theme.Theme` (or a kind to `highlight`),
+its key to `internal/theme/keys.go` and its colors to `themes/basic.toml`.
+A test fails as long as `basic.toml` misses a style.
 
 **Plugins (planned):** commands, key bindings, file types and search modes are
 all set up in `main.go`. A plugin loader can extend them there and use

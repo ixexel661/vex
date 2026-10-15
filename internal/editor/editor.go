@@ -42,6 +42,12 @@ func (e *Editor) Cursor() buffer.Position {
 	return e.cursor
 }
 
+// Configure changes the settings and colors, e.g. from the settings popup.
+func (e *Editor) Configure(cfg config.Config, th theme.Theme) {
+	e.cfg, e.theme = cfg, th
+	e.scrollToCursor()
+}
+
 func (e *Editor) SetSize(width, height int) {
 	e.width, e.height = max(width, 1), max(height, 1)
 	e.scrollToCursor()

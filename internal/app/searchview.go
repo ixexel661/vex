@@ -25,18 +25,14 @@ func (m *Model) searchBar() string {
 	return strings.Join(append(parts, m.theme.Hint.Render(searchHints)), "  ")
 }
 
-// searchInput shows the matcher and the query. The cursor stands right
-// after it.
 func (m *Model) searchInput() string {
 	query := printable(m.search.Query())
 	if m.replaceQuery {
 		query = m.theme.Selected.Render(query)
 	}
-	return m.theme.SearchMode.Render(strings.ToUpper(m.search.Matcher().Name())) + "  " + query
+	return badge(m.theme.SearchMode, strings.ToUpper(m.search.Matcher().Name())) + "  " + query
 }
 
-// matchCount shows which match of how many is selected. It is empty as long
-// as there is no query.
 func (m *Model) matchCount() string {
 	switch {
 	case m.search.Query() == "":
@@ -48,9 +44,6 @@ func (m *Model) matchCount() string {
 	}
 }
 
-// listHeight returns the rows the list of ranked matches takes, including
-// its separator line, or 0 if there is no list. It does not depend on the
-// number of matches, so the editor keeps its size while typing.
 func (m *Model) listHeight() int {
 	if !m.searching || !m.search.Matcher().Ranked() {
 		return 0
@@ -62,8 +55,6 @@ func (m *Model) listHeight() int {
 	return rows + 1
 }
 
-// matchList shows the ranked matches below a separator line, scrolled so
-// that the selected one is in the middle where possible.
 func (m *Model) matchList(height int) string {
 	matches, selected := m.search.Matches(), m.search.Selected()
 	visible := height - 1
@@ -80,10 +71,6 @@ func (m *Model) matchList(height int) string {
 	return strings.Join(rows, "\n")
 }
 
-// listRow shows the line number and the line of a match without its
-// indentation, with the matching runes highlighted. Each piece is styled on
-// its own, because a style reset inside a styled string would end the
-// background of the selected row early.
 func (m *Model) listRow(match search.Match, numberWidth int, selected bool) string {
 	text, number, matched := lipgloss.NewStyle(), m.theme.LineNumber, m.theme.MatchedRune
 	if selected {
@@ -113,8 +100,6 @@ func indentation(line []rune) int {
 	return n
 }
 
-// printable replaces tabs with spaces and other control characters, which
-// would garble the screen, with question marks.
 func printable(s string) string {
 	return strings.Map(func(r rune) rune {
 		switch {

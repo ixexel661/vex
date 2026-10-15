@@ -13,6 +13,7 @@ func Builtins() []Command {
 		modeCommands(),
 		documentCommands(),
 		searchCommands(),
+		settingsCommands(),
 		cursorCommands(),
 		editCommands(),
 	)

@@ -83,6 +83,17 @@ func TestTabsExpandToTabStops(t *testing.T) {
 	}
 }
 
+func TestConfigureChangesTabsAndStyles(t *testing.T) {
+	e := newEditor(t, "a\tb", 40, 1)
+	cfg := config.Default()
+	cfg.TabWidth = 8
+	dots := lipgloss.NewStyle().Transform(func(s string) string { return strings.ReplaceAll(s, " ", ".") })
+	e.Configure(cfg, theme.Theme{CurrentLineNumber: dots})
+	if got, want := e.View(), "..1.a       b"; got != want {
+		t.Errorf("View() = %q, want %q", got, want)
+	}
+}
+
 func TestHorizontalScrolling(t *testing.T) {
 	e := newEditor(t, strings.Repeat("x", 30)+"END", 14, 1)
 	e.MoveLineEnd()

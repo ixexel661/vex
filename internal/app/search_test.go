@@ -37,8 +37,6 @@ func at(row, col int) buffer.Position {
 	return buffer.Position{Row: row, Col: col}
 }
 
-// searchFrom opens the search with the cursor at the start of row and types
-// query.
 func searchFrom(t *testing.T, row int, query string) *Model {
 	t.Helper()
 	m, _ := newModel(t, books)
@@ -55,11 +53,11 @@ func TestSearchJumpsToFirstMatchFromCursor(t *testing.T) {
 	if got := m.editor.Cursor(); got != at(5, 5) {
 		t.Errorf("cursor = %v, want the first match after it at {5 5}", got)
 	}
-	if got, want := m.messageLine(), "TEXT  title  3/4  "+searchHints; got != want {
+	if got, want := m.messageLine(), " TEXT   title  3/4  "+searchHints; got != want {
 		t.Errorf("search bar = %q, want %q", got, want)
 	}
-	if c := m.View().Cursor; c.X != len("TEXT  title") || c.Y != 23 {
-		t.Errorf("terminal cursor at %d,%d, want it after the query at %d,23", c.X, c.Y, len("TEXT  title"))
+	if c := m.View().Cursor; c.X != len(" TEXT   title") || c.Y != 23 {
+		t.Errorf("terminal cursor at %d,%d, want it after the query at %d,23", c.X, c.Y, len(" TEXT   title"))
 	}
 }
 
@@ -148,7 +146,7 @@ func TestSearchTabSwitchesToFuzzyList(t *testing.T) {
 	if got := strings.Count(view, "\n") + 1; got != 24 {
 		t.Errorf("view has %d rows, want 24", got)
 	}
-	for _, want := range []string{"FUZZY  title  1/2", "3  <title>Go</title>", "6  <title>XML</title>"} {
+	for _, want := range []string{" FUZZY   title  1/2", "3  <title>Go</title>", "6  <title>XML</title>"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("view does not show %q:\n%s", want, view)
 		}
