@@ -25,6 +25,34 @@ func (e *Editor) CloseTag() {
 	}
 }
 
+func (e *Editor) MoveToNextTag() {
+	e.jump(filetype.Tags.NextTag)
+}
+
+func (e *Editor) MoveToPrevTag() {
+	e.jump(filetype.Tags.PrevTag)
+}
+
+func (e *Editor) MoveToParent() {
+	e.jump(filetype.Tags.Parent)
+}
+
+func (e *Editor) MoveToFirstChild() {
+	e.jump(filetype.Tags.FirstChild)
+}
+
+// jump moves the cursor to the tag that find returns, if the file type has
+// tags.
+func (e *Editor) jump(find func(filetype.Tags, filetype.Source, buffer.Position) (buffer.Position, bool)) {
+	tags := e.doc.Type.Tags
+	if tags == nil {
+		return
+	}
+	if p, ok := find(tags, e.source(), e.cursor); ok {
+		e.setCursor(p)
+	}
+}
+
 // pair returns the tag name at the cursor and the other name of its element.
 func (e *Editor) pair() (name, other buffer.Range, ok bool) {
 	tags := e.doc.Type.Tags

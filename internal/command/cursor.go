@@ -14,5 +14,9 @@ func cursorCommands() []Command {
 		{Name: "cursor.page-down", Run: onEditor((*editor.Editor).PageDown)},
 		{Name: "cursor.top", Run: onEditor((*editor.Editor).MoveTop)},
 		{Name: "cursor.bottom", Run: onEditor((*editor.Editor).MoveBottom)},
+		{Name: "cursor.next-tag", Run: onEditor((*editor.Editor).MoveToNextTag)},
+		{Name: "cursor.prev-tag", Run: onEditor((*editor.Editor).MoveToPrevTag)},
+		{Name: "cursor.parent", Run: onEditor((*editor.Editor).MoveToParent)},
+		{Name: "cursor.first-child", Run: onEditor((*editor.Editor).MoveToFirstChild)},
 	}
 }

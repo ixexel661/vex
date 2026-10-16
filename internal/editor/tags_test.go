@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"strings"
 	"testing"
 
 	"charm.land/lipgloss/v2"
@@ -124,5 +125,53 @@ func TestDeletingNothingKeepsDocumentUnchanged(t *testing.T) {
 	e.DeleteForward()
 	if e.Document().Modified() {
 		t.Error("deleting at the ends of the document modified it")
+	}
+}
+
+func TestJumpToTags(t *testing.T) {
+	tests := []struct {
+		name string
+		text string
+		move func(*Editor)
+		want string
+	}{
+		{"next tag", "<a>|<b/></a>", (*Editor).MoveToNextTag, "<a><b/>|</a>"},
+		{"previous tag", "<a><b/>|</a>", (*Editor).MoveToPrevTag, "<a>|<b/></a>"},
+		{"parent", "<a><b>x|</b></a>", (*Editor).MoveToParent, "<a>|<b>x</b></a>"},
+		{"first child", "|<a><b/></a>", (*Editor).MoveToFirstChild, "<a>|<b/></a>"},
+		{"nowhere to go", "<a/>|", (*Editor).MoveToNextTag, "<a/>|"},
+	}
+	for _, tt := range tests {
+		e := newEditorAt(t, xml.Type(), tt.text)
+		tt.move(e)
+		if got := withCursor(e); got != tt.want {
+			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
+		}
+	}
+}
+
+func TestJumpWithoutTags(t *testing.T) {
+	e := newEditorAt(t, filetype.Plain(), "<a>|<b/></a>")
+	for _, move := range []func(*Editor){(*Editor).MoveToNextTag, (*Editor).MoveToPrevTag, (*Editor).MoveToParent, (*Editor).MoveToFirstChild} {
+		move(e)
+	}
+	if got := withCursor(e); got != "<a>|<b/></a>" {
+		t.Errorf("cursor moved in a file type without tags: %q", got)
+	}
+}
+
+func TestJumpScrollsToTheTag(t *testing.T) {
+	e := newEditorAt(t, xml.Type(), "<a>|\n\n\n\n  <b/>\n</a>")
+	e.MoveToNextTag()
+	if got := e.Cursor(); got != (buffer.Position{Row: 4, Col: 2}) {
+		t.Fatalf("cursor = %v, want {4 2}", got)
+	}
+	if view := e.View(); !strings.Contains(view, "<b/>") {
+		t.Errorf("the view does not show the tag:\n%s", view)
+	}
+	e.MoveUp()
+	e.MoveDown()
+	if got := e.Cursor(); got.Col != 2 {
+		t.Errorf("column after up and down = %d, want the column of the tag", got.Col)
 	}
 }

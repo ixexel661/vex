@@ -20,6 +20,10 @@ func Default() *Keymap {
 		{"pgdown", "cursor.page-down"},
 		{"ctrl+home", "cursor.top"},
 		{"ctrl+end", "cursor.bottom"},
+		{"ctrl+right", "cursor.next-tag"},
+		{"ctrl+left", "cursor.prev-tag"},
+		{"ctrl+up", "cursor.parent"},
+		{"ctrl+down", "cursor.first-child"},
 	}
 	normal := []Binding{
 		{"i", "mode.insert"},

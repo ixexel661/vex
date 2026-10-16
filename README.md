@@ -105,10 +105,20 @@ open a file called `new`, use `vex ./new`.
 | both   | `ctrl+f`                              | search                                    |
 | both   | arrows, `home`/`end`, `pgup`/`pgdown` | move                                      |
 | both   | `ctrl+home`/`ctrl+end`                | go to the start/end of the document       |
+| both   | `ctrl+left`/`ctrl+right`              | go to the previous/next tag               |
+| both   | `ctrl+up`                             | go to the start tag of the element around |
+| both   | `ctrl+down`                           | go to the first child element             |
 | insert | `esc`, `ctrl+c`                       | stop editing                              |
 | insert | `enter`, `backspace`, `delete`        | new line (keeps indentation), delete      |
 | insert | `tab`, `shift+tab`                    | indent to the next stop, outdent the line |
 | insert | `>`                                   | end a start tag and add its end tag       |
+
+The `ctrl` arrows put the cursor at the `<` of a tag. `ctrl+left` and
+`ctrl+right` stop at every start, end and empty tag, but not at tags in
+comments or CDATA. `ctrl+up` goes to the start tag of the element the cursor
+is in, so pressing it again climbs up to the root. `ctrl+down` goes the other
+way, from a start tag to its first child, and from outside of all elements
+to the root element.
 
 Formatting changes the whitespace between tags and, if the settings ask for
 it, wraps long tags and shortens empty elements. Text is kept exactly as it

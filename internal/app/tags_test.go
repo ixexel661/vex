@@ -7,7 +7,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/ixexel661/vex/internal/buffer"
 	"github.com/ixexel661/vex/internal/highlight"
+	"github.com/ixexel661/vex/internal/mode"
 	"github.com/ixexel661/vex/internal/theme"
 )
 
@@ -60,4 +62,35 @@ func TestTagPairIsMarkedInInsertMode(t *testing.T) {
 	expect("insert mode", " <[book]>x</[book]>")
 	press(m, esc)
 	expect("back in normal mode", " <book>x</book>")
+}
+
+func TestCtrlArrowsJumpBetweenTags(t *testing.T) {
+	ctrl := func(code rune) tea.KeyPressMsg { return tea.KeyPressMsg{Code: code, Mod: tea.ModCtrl} }
+	const text = "<a>\n  <b>x</b>\n</a>\n"
+	steps := []struct {
+		key  tea.KeyPressMsg
+		want buffer.Position
+	}{
+		{ctrl(tea.KeyRight), at(1, 2)},
+		{ctrl(tea.KeyRight), at(1, 6)},
+		{ctrl(tea.KeyUp), at(1, 2)},
+		{ctrl(tea.KeyUp), at(0, 0)},
+		{ctrl(tea.KeyDown), at(1, 2)},
+		{ctrl(tea.KeyLeft), at(0, 0)},
+	}
+	for _, m0 := range []mode.Mode{mode.Normal, mode.Insert} {
+		m, _ := newModel(t, text)
+		if m0 == mode.Insert {
+			press(m, key("i"))
+		}
+		for i, s := range steps {
+			press(m, s.key)
+			if got := m.editor.Cursor(); got != s.want {
+				t.Errorf("%v, step %d (%s): cursor = %v, want %v", m0, i, s.key, got, s.want)
+			}
+		}
+		if got := m.editor.Document().Buffer.Text(); got != text || m.mode != m0 {
+			t.Errorf("%v: text = %q, mode = %v, want both unchanged", m0, got, m.mode)
+		}
+	}
 }

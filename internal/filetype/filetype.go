@@ -51,7 +51,8 @@ type Validator interface {
 }
 
 // Tags pairs the start and end tags of elements, so the editor can mark and
-// rename both names at once and add the end tag as a start tag is typed.
+// rename both names at once and add the end tag as a start tag is typed. It
+// also finds tags for the cursor to jump to, at the start of the tag.
 type Tags interface {
 	// Pair returns the name of the tag at p and the name of the other tag of its element.
 	Pair(src Source, p buffer.Position) (name, other buffer.Range, ok bool)
@@ -60,6 +61,14 @@ type Tags interface {
 	// Close returns the end tag for the start tag that the ">" right before p
 	// ends, unless the element has one already.
 	Close(src Source, p buffer.Position) (string, bool)
+	// NextTag returns where the first tag after p starts, PrevTag where the
+	// last one before p starts.
+	NextTag(src Source, p buffer.Position) (buffer.Position, bool)
+	PrevTag(src Source, p buffer.Position) (buffer.Position, bool)
+	// Parent returns where the start tag of the element around p starts.
+	Parent(src Source, p buffer.Position) (buffer.Position, bool)
+	// FirstChild returns where the first child of the element at p starts.
+	FirstChild(src Source, p buffer.Position) (buffer.Position, bool)
 }
 
 // Source is a document as file types read it: its lines and the state the
