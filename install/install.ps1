@@ -22,10 +22,15 @@ function Get-VexDir {
 
 # Get-VexAsset returns the name of the release file for this system.
 function Get-VexAsset {
-    $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
-    switch ($arch.ToString()) {
-        'X64' { return 'vex-windows-amd64.exe' }
-        'Arm64' { return 'vex-windows-arm64.exe' }
+    # A 32-bit PowerShell sees x86, PROCESSOR_ARCHITEW6432 has the
+    # architecture of Windows then.
+    $arch = $env:PROCESSOR_ARCHITEW6432
+    if (-not $arch) {
+        $arch = $env:PROCESSOR_ARCHITECTURE
+    }
+    switch ($arch) {
+        'AMD64' { return 'vex-windows-amd64.exe' }
+        'ARM64' { return 'vex-windows-arm64.exe' }
         default { throw "vex: there is no vex for $arch" }
     }
 }
@@ -57,12 +62,16 @@ function Get-VexChecksum($sums, $asset) {
 # The PATH of the user is read and written in the registry, where entries
 # like %USERPROFILE%\bin keep their variables.
 function Get-VexUserPath {
-    $key = Get-Item 'HKCU:\Environment'
-    return ($key.GetValue('Path', '', 'DoNotExpandEnvironmentNames') -split ';' | Where-Object { $_ })
+    $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment')
+    $path = $key.GetValue('Path', '', 'DoNotExpandEnvironmentNames')
+    $key.Close()
+    return ($path -split ';' | Where-Object { $_ })
 }
 
 function Set-VexUserPath($entries) {
-    Set-ItemProperty 'HKCU:\Environment' -Name Path -Value ($entries -join ';') -Type ExpandString
+    $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)
+    $key.SetValue('Path', ($entries -join ';'), 'ExpandString')
+    $key.Close()
     # Changing a variable through .NET tells Windows that the environment
     # changed, so that new terminals get the new PATH.
     [Environment]::SetEnvironmentVariable('VEX_INSTALLER', '1', 'User')
