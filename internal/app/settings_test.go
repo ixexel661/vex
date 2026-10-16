@@ -94,9 +94,58 @@ func TestSettingsEnterSaves(t *testing.T) {
 		t.Errorf("saved config = %+v, %v, want %+v", got, err, want)
 	}
 
-	press(m, key("f"))
 	if got := m.editor.Document().Buffer.Text(); !strings.HasPrefix(got, "<books>\n    <book>\n") {
-		t.Errorf("format did not use the new indent:\n%s", got)
+		t.Errorf("enter did not keep the text formatted with the new indent:\n%s", got)
+	}
+	press(m, key("f"))
+	if got := m.messageLine(); got != "Already formatted" {
+		t.Errorf("message after f = %q", got)
+	}
+}
+
+func TestSettingsFormatAtOnce(t *testing.T) {
+	const src = "<a>\n    <b>x</b>\n</a>\n"
+	m, _ := newModel(t, src)
+	doc := m.editor.Document()
+	// At the end of the line, which gets shorter with tabs.
+	press(m, down, tea.KeyPressMsg{Code: tea.KeyEnd})
+	cursor := m.editor.Cursor()
+
+	press(m, key("s"), down, down, left)
+	if got, want := doc.Buffer.Text(), "<a>\n\t<b>x</b>\n</a>\n"; got != want || !doc.Modified() {
+		t.Errorf("text = %q, modified = %v, want %q formatted at once", got, doc.Modified(), want)
+	}
+	press(m, esc)
+	if got := doc.Buffer.Text(); got != src || doc.Modified() || m.editor.Cursor() != cursor {
+		t.Errorf("after esc text = %q, modified = %v, cursor = %v, want them as before", got, doc.Modified(), m.editor.Cursor())
+	}
+
+	press(m, key("s"), down, down, right, left)
+	if got := doc.Buffer.Text(); got != src || doc.Modified() {
+		t.Errorf("text = %q, modified = %v, want the text back with the indent from before", got, doc.Modified())
+	}
+}
+
+func TestSettingsFormatFromTheTextBefore(t *testing.T) {
+	m, _ := newModel(t, "<a>\n  <b></b>\n</a>\n")
+	// Empty elements on, indent with 4 spaces, empty elements off again.
+	press(m, key("s"), down, down, down, right, up, right, down, left)
+	if got, want := m.editor.Document().Buffer.Text(), "<a>\n    <b></b>\n</a>\n"; got != want {
+		t.Errorf("text = %q, want %q", got, want)
+	}
+}
+
+func TestSettingsFormatError(t *testing.T) {
+	m, _ := newModel(t, "<a>")
+	press(m, key("s"), down, down, right)
+	if got := m.messageLine(); !strings.Contains(got, "cannot format") {
+		t.Errorf("message line = %q, want the format error", got)
+	}
+	if got := m.editor.Document().Buffer.Text(); got != "<a>" {
+		t.Errorf("text = %q, want it unchanged", got)
+	}
+	if m.Config().Format.Indent != "    " {
+		t.Errorf("indent = %q, want the setting to change anyway", m.Config().Format.Indent)
 	}
 }
 

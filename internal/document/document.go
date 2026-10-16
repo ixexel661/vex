@@ -63,6 +63,12 @@ func (d *Document) Modified() bool {
 	return d.Buffer.Version() != d.savedVersion
 }
 
+// MarkUnmodified says the text is the one in the file again, e.g. after a
+// change was taken back.
+func (d *Document) MarkUnmodified() {
+	d.savedVersion = d.Buffer.Version()
+}
+
 func (d *Document) Save() error {
 	text := strings.ReplaceAll(d.Buffer.Text(), "\n", d.lineEnding)
 	if d.hasBOM {

@@ -23,6 +23,7 @@ entity        = { fg = "yellow" }
 cdata         = { fg = "yellow" }
 match         = { fg = "black", bg = "yellow" }
 current-match = { fg = "bright-white", bg = "magenta", bold = true }
+linked-tag    = { fg = "blue", underline = true }
 
 # Everything around the text
 [ui]

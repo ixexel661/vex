@@ -27,11 +27,19 @@ func (c *Cache) Spans(lines Lines, row int) []Span {
 	if c.highlighter == nil {
 		return nil
 	}
+	spans, _ := c.highlighter.Highlight([]rune(lines.Line(row)), c.State(lines, row))
+	return spans
+}
+
+// State returns the state at the start of row.
+func (c *Cache) State(lines Lines, row int) State {
+	if c.highlighter == nil {
+		return 0
+	}
 	for len(c.states) <= row {
 		last := len(c.states) - 1
 		_, next := c.highlighter.Highlight([]rune(lines.Line(last)), c.states[last])
 		c.states = append(c.states, next)
 	}
-	spans, _ := c.highlighter.Highlight([]rune(lines.Line(row)), c.states[row])
-	return spans
+	return c.states[row]
 }

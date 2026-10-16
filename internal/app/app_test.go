@@ -144,10 +144,12 @@ func TestQuitWithChangesAsks(t *testing.T) {
 }
 
 func TestFormat(t *testing.T) {
-	m, _ := newModel(t, "<a><b/></a>")
-	press(m, key("f"))
-	if got := m.editor.Document().Buffer.Text(); got != "<a>\n  <b/>\n</a>\n" {
-		t.Errorf("text = %q", got)
+	for _, src := range []string{"<a><b/></a>", "<a>\n\t<b/>\n</a>\n"} {
+		m, _ := newModel(t, src)
+		press(m, key("f"))
+		if got := m.editor.Document().Buffer.Text(); got != "<a>\n  <b/>\n</a>\n" {
+			t.Errorf("text of %q = %q", src, got)
+		}
 	}
 }
 

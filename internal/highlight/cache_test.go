@@ -53,8 +53,26 @@ func TestCacheInvalidate(t *testing.T) {
 	}
 }
 
+func TestCacheState(t *testing.T) {
+	text := lines{"a", "*", "b", "*"}
+	c := NewCache(&toggler{})
+	// Out of order, so some states come from the cache.
+	for _, tt := range []struct {
+		row  int
+		want State
+	}{{2, 1}, {0, 0}, {3, 1}, {1, 0}} {
+		if got := c.State(text, tt.row); got != tt.want {
+			t.Errorf("State(%d) = %d, want %d", tt.row, got, tt.want)
+		}
+	}
+}
+
 func TestCacheWithoutHighlighter(t *testing.T) {
-	if spans := NewCache(nil).Spans(lines{"a"}, 0); spans != nil {
+	c := NewCache(nil)
+	if spans := c.Spans(lines{"a"}, 0); spans != nil {
 		t.Errorf("Spans() = %v, want nil", spans)
+	}
+	if state := c.State(lines{"a", "b"}, 1); state != 0 {
+		t.Errorf("State() = %d, want 0", state)
 	}
 }

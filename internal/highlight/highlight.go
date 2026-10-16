@@ -15,6 +15,7 @@ const (
 	CData
 	Match
 	CurrentMatch
+	LinkedTag
 )
 
 // Span marks the runes from Start up to, but not including, End of a line.

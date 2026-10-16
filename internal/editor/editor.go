@@ -16,6 +16,8 @@ type Editor struct {
 	highlights *highlight.Cache
 	marks      map[int][]highlight.Span // by row
 
+	linkedEditing bool
+
 	cursor  buffer.Position
 	goalCol int // the column vertical movement returns to on long enough lines
 

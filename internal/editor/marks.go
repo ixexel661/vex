@@ -11,8 +11,13 @@ type Mark struct {
 
 // SetMarks replaces the marks shown in the text.
 func (e *Editor) SetMarks(marks []Mark) {
-	e.marks = map[int][]highlight.Span{}
+	e.marks = byRow(marks)
+}
+
+func byRow(marks []Mark) map[int][]highlight.Span {
+	rows := map[int][]highlight.Span{}
 	for _, m := range marks {
-		e.marks[m.Row] = append(e.marks[m.Row], m.Span)
+		rows[m.Row] = append(rows[m.Row], m.Span)
 	}
+	return rows
 }

@@ -19,6 +19,7 @@ func (m *Model) Config() config.Config {
 
 func (m *Model) SetMode(md mode.Mode) {
 	m.mode = md
+	m.editor.SetLinkedEditing(md == mode.Insert)
 }
 
 func (m *Model) Notify(text string) {

@@ -6,17 +6,22 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/ixexel661/vex/internal/buffer"
 	"github.com/ixexel661/vex/internal/config"
 	"github.com/ixexel661/vex/internal/theme"
 )
 
 // settingsPopup is the open settings popup. Changes apply at once, cancel
-// goes back to the config and theme from when it opened.
+// goes back to the config, theme and document from when it opened.
 type settingsPopup struct {
 	rows     []setting
 	selected int
 	cfg      config.Config
 	theme    theme.Theme
+	// The document as it was. Format changes start from its text.
+	text     string
+	cursor   buffer.Position
+	modified bool
 }
 
 // setting is a row of the settings popup.
@@ -90,10 +95,14 @@ func wrapLimit(n int) string {
 }
 
 func (m *Model) OpenSettings() {
+	doc := m.editor.Document()
 	m.settings = &settingsPopup{
-		rows:  settingRows(m.themes.Names()),
-		cfg:   m.cfg,
-		theme: m.theme,
+		rows:     settingRows(m.themes.Names()),
+		cfg:      m.cfg,
+		theme:    m.theme,
+		text:     doc.Buffer.Text(),
+		cursor:   m.editor.Cursor(),
+		modified: doc.Modified(),
 	}
 }
 
@@ -118,7 +127,44 @@ func (m *Model) settingsKey(key string) {
 func (m *Model) changeSetting(step int) {
 	cfg := m.cfg
 	m.settings.rows[m.settings.selected].change(&cfg, step)
+	reformat := cfg.Format != m.cfg.Format
 	m.setConfig(cfg)
+	if reformat {
+		m.previewFormat()
+	}
+}
+
+// previewFormat shows the document from when the settings opened, formatted
+// with the format settings unless they are the ones it opened with.
+func (m *Model) previewFormat() {
+	s := m.settings
+	text := s.text
+	if m.cfg.Format != s.cfg.Format {
+		formatted, err := m.editor.Document().Type.Format(s.text, m.cfg.Format)
+		if err != nil {
+			m.reportError(err)
+			return
+		}
+		text = formatted
+	}
+	m.showText(text)
+}
+
+// showText puts text in the editor. The text from when the settings opened
+// brings back its cursor too, and that the document was unmodified.
+func (m *Model) showText(text string) {
+	s := m.settings
+	doc := m.editor.Document()
+	if text == doc.Buffer.Text() {
+		return
+	}
+	m.editor.SetText(text)
+	if text == s.text {
+		m.editor.MoveTo(s.cursor)
+		if !s.modified {
+			doc.MarkUnmodified()
+		}
+	}
 }
 
 // setConfig applies cfg at once. The theme is only loaded if its name
@@ -145,5 +191,6 @@ func (m *Model) saveSettings() {
 func (m *Model) cancelSettings() {
 	m.cfg, m.theme = m.settings.cfg, m.settings.theme
 	m.editor.Configure(m.cfg, m.theme)
+	m.showText(m.settings.text)
 	m.settings = nil
 }

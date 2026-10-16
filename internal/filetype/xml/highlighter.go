@@ -43,11 +43,17 @@ var markup = []highlight.State{inComment, inCData, inProcInst, inDeclaration}
 type Highlighter struct{}
 
 func (Highlighter) Highlight(line []rune, state highlight.State) ([]highlight.Span, highlight.State) {
+	l := lex(line, state)
+	return l.spans, l.state
+}
+
+// lex reads a line that starts in state.
+func lex(line []rune, state highlight.State) *lexer {
 	l := &lexer{line: line, state: state}
 	for l.pos < len(l.line) {
 		l.step()
 	}
-	return l.spans, l.state
+	return l
 }
 
 type lexer struct {
@@ -55,6 +61,7 @@ type lexer struct {
 	pos   int
 	state highlight.State
 	spans []highlight.Span
+	parts []part // the names and ends of tags, for Tags
 }
 
 func (l *lexer) step() {
@@ -86,12 +93,16 @@ func (l *lexer) text() {
 }
 
 func (l *lexer) openTag() {
+	kind := startName
 	if l.hasPrefix("</") {
+		kind = endName
 		l.take(2, highlight.Punctuation)
 	} else {
 		l.take(1, highlight.Punctuation)
 	}
+	start := l.pos
 	l.takeWhile(highlight.Tag, isNameRune)
+	l.parts = append(l.parts, part{kind: kind, start: start, end: l.pos, name: string(l.line[start:l.pos])})
 	l.state = inTag
 }
 
@@ -99,11 +110,9 @@ func (l *lexer) tag() {
 	r := l.line[l.pos]
 	switch {
 	case l.hasPrefix("/>"):
-		l.take(2, highlight.Punctuation)
-		l.state = inText
+		l.takeTagEnd(emptyTagEnd, 2)
 	case r == '>':
-		l.take(1, highlight.Punctuation)
-		l.state = inText
+		l.takeTagEnd(tagEnd, 1)
 	case r == '<':
 		// The tag was never closed, a new one starts here.
 		l.state = inText
@@ -118,6 +127,13 @@ func (l *lexer) tag() {
 	default:
 		l.take(1, highlight.Plain)
 	}
+}
+
+// takeTagEnd takes the n runes of ">" or "/>".
+func (l *lexer) takeTagEnd(kind partKind, n int) {
+	l.parts = append(l.parts, part{kind: kind, start: l.pos, end: l.pos + n})
+	l.take(n, highlight.Punctuation)
+	l.state = inText
 }
 
 func (l *lexer) entity() {

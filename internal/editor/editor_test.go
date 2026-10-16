@@ -3,6 +3,7 @@ package editor
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"charm.land/lipgloss/v2"
 
@@ -21,6 +22,27 @@ func newEditor(t *testing.T, text string, width, height int) *Editor {
 	e := New(doc, config.Default(), theme.Theme{})
 	e.SetSize(width, height)
 	return e
+}
+
+// newEditorAt returns an unstyled editor with the cursor at the "|" in text.
+func newEditorAt(t *testing.T, fileType filetype.Type, text string) *Editor {
+	t.Helper()
+	before, after, _ := strings.Cut(text, "|")
+	doc := &document.Document{Path: "test.xml", Type: fileType, Buffer: buffer.New(before + after)}
+	e := New(doc, config.Default(), theme.Theme{})
+	e.SetSize(80, 1)
+	lines := strings.Split(before, "\n")
+	e.MoveTo(buffer.Position{Row: len(lines) - 1, Col: utf8.RuneCountInString(lines[len(lines)-1])})
+	return e
+}
+
+// withCursor returns the text of e with the cursor as "|".
+func withCursor(e *Editor) string {
+	lines := strings.Split(e.Document().Buffer.Text(), "\n")
+	c := e.Cursor()
+	line := []rune(lines[c.Row])
+	lines[c.Row] = string(line[:c.Col]) + "|" + string(line[c.Col:])
+	return strings.Join(lines, "\n")
 }
 
 func TestNewlineKeepsIndentation(t *testing.T) {

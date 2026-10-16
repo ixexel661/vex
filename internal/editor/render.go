@@ -9,6 +9,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 
+	"github.com/ixexel661/vex/internal/buffer"
 	"github.com/ixexel661/vex/internal/highlight"
 )
 
@@ -20,6 +21,7 @@ type cell struct {
 }
 
 func (e *Editor) View() string {
+	pair := e.pairMarks()
 	rows := make([]string, e.height)
 	for y := range rows {
 		row := e.top + y
@@ -27,7 +29,7 @@ func (e *Editor) View() string {
 			rows[y] = e.theme.Filler.Render("~")
 			continue
 		}
-		rows[y] = e.gutter(row) + e.renderLine(row)
+		rows[y] = e.gutter(row) + e.renderLine(row, pair[row])
 	}
 	return strings.Join(rows, "\n")
 }
@@ -54,18 +56,23 @@ func (e *Editor) gutter(row int) string {
 	return style.Render(fmt.Sprintf("%*d ", e.gutterWidth()-1, row+1))
 }
 
-// renderLine highlights a row. The marks come after the syntax spans, so
-// they win where both cover a rune.
-func (e *Editor) renderLine(row int) string {
+// renderLine highlights a row. Later spans win where they cover the same
+// rune: the syntax comes first, then the tag pair, then the marks.
+func (e *Editor) renderLine(row int, pair []highlight.Span) string {
 	line := []rune(e.buffer().Line(row))
-	kinds := kindsOf(len(line), slices.Concat(e.highlights.Spans(e.buffer(), row), e.marks[row]))
+	kinds := kindsOf(len(line), slices.Concat(e.highlights.Spans(e.buffer(), row), pair, e.marks[row]))
 	return e.paint(visible(e.cells(line), e.left, e.textWidth()), kinds)
 }
 
 func (e *Editor) cursorColumn() int {
-	line := []rune(e.buffer().Line(e.cursor.Row))
+	return e.column(e.cursor)
+}
+
+// column returns the screen column of p in its line, with tabs expanded.
+func (e *Editor) column(p buffer.Position) int {
+	line := []rune(e.buffer().Line(p.Row))
 	col := 0
-	for _, c := range e.cells(line[:e.cursor.Col]) {
+	for _, c := range e.cells(line[:p.Col]) {
 		col += c.width
 	}
 	return col

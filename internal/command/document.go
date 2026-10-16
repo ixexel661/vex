@@ -20,13 +20,10 @@ func saveDocument(ctx Context) error {
 
 func formatDocument(ctx Context) error {
 	doc := ctx.Editor().Document()
-	if doc.Type.Formatter == nil {
-		return fmt.Errorf("%s files cannot be formatted", doc.Type.Name)
-	}
 	text := doc.Buffer.Text()
-	formatted, err := doc.Type.Formatter.Format(text, ctx.Config().Format)
+	formatted, err := doc.Type.Format(text, ctx.Config().Format)
 	if err != nil {
-		return fmt.Errorf("cannot format: %w", err)
+		return err
 	}
 	if formatted == text {
 		ctx.Notify("Already formatted")

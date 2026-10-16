@@ -35,11 +35,24 @@ well-formed XML and, if not, the line of the first error.
 | both   | arrows, `home`/`end`, `pgup`/`pgdown` | move                                      |
 | both   | `ctrl+home`/`ctrl+end`                | go to the start/end of the document       |
 | insert | `esc`, `ctrl+c`                       | stop editing                              |
-| insert | `enter`, `backspace`, `delete`, `tab` | new line (keeps indentation), delete, indent |
+| insert | `enter`, `backspace`, `delete`        | new line (keeps indentation), delete      |
+| insert | `tab`, `shift+tab`                    | indent to the next stop, outdent the line |
+| insert | `>`                                   | end a start tag and add its end tag       |
 
 Formatting changes the whitespace between tags and, if the settings ask for
 it, wraps long tags and shortens empty elements. Text is kept exactly as it
 is.
+
+Indenting while typing follows the `indent` setting: `tab` fills up to the
+next indent stop, `shift+tab` takes one level off the start of the line, and
+`backspace` in the indentation deletes back to the previous stop.
+
+In insert mode, the start and end tag of an element stay in step. With the
+cursor on a tag name, both names are marked, and typing or deleting in one
+of them changes the other one too. Characters that cannot be part of a name,
+like the space before an attribute, only go where you type them. Typing `>`
+at the end of a start tag adds its end tag right after it, with the cursor
+in between, unless the element has an end tag already.
 
 ### Search
 
@@ -64,7 +77,10 @@ and `enter` use it.
 
 ### Settings
 
-`s` opens the settings over the text. Every change shows at once.
+`s` opens the settings over the text. Every change shows at once: the
+format settings format the document right away, always the text from when
+the settings opened. `esc` brings that text back, `enter` keeps the
+formatted one, which is then a change to save.
 
 | Keys              | Action                                  |
 |-------------------|-----------------------------------------|
@@ -132,7 +148,7 @@ internal/
   highlight/            highlighting primitives and a per-line cache
   search/               text and fuzzy search
   filetype/             file type registry
-    xml/                XML highlighter, formatter and validator
+    xml/                XML highlighter, formatter, validator and tag pairs
   config/               settings and the config file
   theme/                styles and theme files
 ```
@@ -146,7 +162,8 @@ internal/
 
 **A new file format:** create `internal/filetype/<format>` with a function
 returning a `filetype.Type`. Only fill in what the format supports
-(`Highlighter`, `Formatter`, `Validator`), then register it in `main.go`.
+(`Highlighter`, `Formatter`, `Validator`, `Tags`), then register it in
+`main.go`.
 
 **A new search mode:** implement `search.Matcher` in `internal/search`, e.g.
 for regular expressions or XPath, and add it to the matchers in `main.go`.

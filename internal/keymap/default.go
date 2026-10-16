@@ -39,6 +39,8 @@ func Default() *Keymap {
 		{"backspace", "edit.delete-backward"},
 		{"delete", "edit.delete-forward"},
 		{"tab", "edit.indent"},
+		{"shift+tab", "edit.outdent"},
+		{">", "edit.close-tag"},
 	}
 
 	k := New()

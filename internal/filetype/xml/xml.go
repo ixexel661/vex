@@ -12,5 +12,6 @@ func Type() filetype.Type {
 		Highlighter: Highlighter{},
 		Formatter:   Formatter{},
 		Validator:   Validator{},
+		Tags:        Tags{},
 	}
 }

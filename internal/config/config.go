@@ -13,7 +13,8 @@ type Config struct {
 	Format   Format `toml:"format"`
 }
 
-// Format is how documents are formatted. The tab key inserts the indent too.
+// Format is how documents are formatted. While typing, tab, shift+tab and
+// backspace in the indentation use Indent too.
 type Format struct {
 	Indent         Indent `toml:"indent"`
 	SelfCloseEmpty bool   `toml:"self-close-empty"`

@@ -7,11 +7,8 @@ func editCommands() []Command {
 		{Name: "edit.newline", Run: onEditor((*editor.Editor).Newline)},
 		{Name: "edit.delete-backward", Run: onEditor((*editor.Editor).DeleteBackward)},
 		{Name: "edit.delete-forward", Run: onEditor((*editor.Editor).DeleteForward)},
-		{Name: "edit.indent", Run: indent},
+		{Name: "edit.indent", Run: onEditor((*editor.Editor).Indent)},
+		{Name: "edit.outdent", Run: onEditor((*editor.Editor).Outdent)},
+		{Name: "edit.close-tag", Run: onEditor((*editor.Editor).CloseTag)},
 	}
-}
-
-func indent(ctx Context) error {
-	ctx.Editor().InsertText(string(ctx.Config().Format.Indent))
-	return nil
 }

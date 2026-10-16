@@ -15,6 +15,11 @@ func (p Position) Before(q Position) bool {
 	return p.Row < q.Row || p.Row == q.Row && p.Col < q.Col
 }
 
+// Range is the text from Start up to, but not including, End.
+type Range struct {
+	Start, End Position
+}
+
 type Buffer struct {
 	lines   []string
 	version int
