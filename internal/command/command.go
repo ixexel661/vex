@@ -14,6 +14,8 @@ type Context interface {
 	SetMode(m mode.Mode)
 	Notify(message string)
 	Ask(question string, choices ...Choice)
+	// Prompt asks for a line of text and runs run with it.
+	Prompt(label string, run func(ctx Context, text string) error)
 	OpenSearch()
 	OpenSettings()
 	Quit()

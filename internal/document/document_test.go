@@ -89,6 +89,56 @@ func TestModified(t *testing.T) {
 	}
 }
 
+func TestNew(t *testing.T) {
+	doc := New("", filetype.Type{Template: "<?xml?>\n"})
+	if got := doc.Buffer.Text(); got != "<?xml?>\n" {
+		t.Errorf("text = %q, want the template", got)
+	}
+	if doc.Modified() {
+		t.Error("new document is modified")
+	}
+	if got := doc.Name(); got != "untitled" {
+		t.Errorf("Name() = %q, want untitled", got)
+	}
+	if err := doc.Save(); err == nil {
+		t.Error("Save() without a path succeeded")
+	}
+}
+
+func TestSaveAs(t *testing.T) {
+	dir := t.TempDir()
+	doc := New("", filetype.Plain())
+	doc.Buffer.Insert(buffer.Position{}, "<a/>")
+
+	if err := doc.SaveAs(filepath.Join(dir, "missing", "a.xml")); err == nil {
+		t.Fatal("SaveAs() into a missing directory succeeded")
+	}
+	if doc.Path != "" || !doc.Modified() {
+		t.Errorf("after a failed SaveAs() path = %q, modified = %v, want them unchanged", doc.Path, doc.Modified())
+	}
+
+	path := filepath.Join(dir, "a.xml")
+	if err := doc.SaveAs(path); err != nil {
+		t.Fatal(err)
+	}
+	if got := readFile(t, path); got != "<a/>" {
+		t.Errorf("saved file = %q", got)
+	}
+	if doc.Name() != "a.xml" || doc.Modified() {
+		t.Errorf("name = %q, modified = %v, want a.xml and saved", doc.Name(), doc.Modified())
+	}
+}
+
+func TestExists(t *testing.T) {
+	path := writeFile(t, "")
+	if !Exists(path) {
+		t.Errorf("Exists(%q) = false", path)
+	}
+	if missing := filepath.Join(filepath.Dir(path), "missing.xml"); Exists(missing) {
+		t.Errorf("Exists(%q) = true", missing)
+	}
+}
+
 type rejectAll struct{}
 
 func (rejectAll) Validate(string) error { return errors.New("invalid") }

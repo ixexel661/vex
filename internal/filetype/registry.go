@@ -18,6 +18,15 @@ func (r *Registry) Register(t Type) {
 	r.types = append(r.types, t)
 }
 
+// Default is the type of new files without a name or an extension: the
+// first one registered.
+func (r *Registry) Default() Type {
+	if len(r.types) == 0 {
+		return Plain()
+	}
+	return r.types[0]
+}
+
 // Detect picks the file type by the extension of path.
 func (r *Registry) Detect(path string) Type {
 	ext := strings.ToLower(filepath.Ext(path))

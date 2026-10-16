@@ -37,7 +37,7 @@ func TestSettingsPopup(t *testing.T) {
 	v := m.View()
 	for _, want := range []string{
 		"╭─ Settings ─", "▸ Theme", "‹ basic ›", "Tab width", "‹ 4 ›", "Indent", "‹ 2 spaces ›",
-		"Empty elements", "‹ <a></a> ›", "Blank lines", "‹ remove ›", "Wrap tags", "‹ never ›", "config.toml │",
+		"Empty elements", "‹ <a></a> ›", "Blank lines", "‹ remove ›", "Wrap tags", "‹ never ›", "│ vex v1.2.3 · ", "config.toml │",
 	} {
 		if !strings.Contains(v.Content, want) {
 			t.Errorf("view does not show %q:\n%s", want, v.Content)

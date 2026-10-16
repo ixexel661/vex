@@ -45,7 +45,14 @@ func newModelWithTheme(t *testing.T, content string, th theme.Theme) (*Model, st
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := New(doc, Setup{
+	m := New(doc, setup(dir, th))
+	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	return m, path
+}
+
+// setup keeps the config file and the themes directory in dir.
+func setup(dir string, th theme.Theme) Setup {
+	return Setup{
 		Commands:   command.NewRegistry(command.Builtins()...),
 		Keys:       keymap.Default(),
 		Matchers:   []search.Matcher{search.Text{}, search.Fuzzy{}},
@@ -53,9 +60,8 @@ func newModelWithTheme(t *testing.T, content string, th theme.Theme) (*Model, st
 		ConfigPath: filepath.Join(dir, "config.toml"),
 		Theme:      th,
 		Themes:     theme.NewStore(filepath.Join(dir, "themes"), os.DirFS("../../themes")),
-	})
-	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
-	return m, path
+		Version:    "v1.2.3",
+	}
 }
 
 // press sends the keys one by one and returns the command of the last one.

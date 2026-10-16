@@ -25,7 +25,7 @@ func (m *Model) settingsBox() string {
 		}
 		lines[i] = fmt.Sprintf("%s %-*s  ‹ %s ›", marker, labelWidth, r.label, r.value(m.cfg))
 	}
-	footer := m.configLocation()
+	footer := "vex " + m.version + " · " + m.configLocation()
 	width := lipgloss.Width(footer)
 	for _, line := range lines {
 		width = max(width, lipgloss.Width(line))

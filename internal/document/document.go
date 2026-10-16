@@ -17,7 +17,7 @@ const bom = "\uFEFF"
 
 // Document connects a file on disk with the buffer it is edited in.
 type Document struct {
-	Path   string
+	Path   string // empty until a new document is saved for the first time
 	Type   filetype.Type
 	Buffer *buffer.Buffer
 
@@ -55,7 +55,27 @@ func Open(path string, fileType filetype.Type) (*Document, error) {
 	}, nil
 }
 
+// New returns a document for a new file at path, with the template of its
+// type. Nothing is written yet, and path may be empty.
+func New(path string, fileType filetype.Type) *Document {
+	return &Document{
+		Path:       path,
+		Type:       fileType,
+		Buffer:     buffer.New(fileType.Template),
+		lineEnding: "\n",
+	}
+}
+
+// Exists reports whether there is a file at path.
+func Exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 func (d *Document) Name() string {
+	if d.Path == "" {
+		return "untitled"
+	}
 	return filepath.Base(d.Path)
 }
 
@@ -70,6 +90,9 @@ func (d *Document) MarkUnmodified() {
 }
 
 func (d *Document) Save() error {
+	if d.Path == "" {
+		return errors.New("the document has no file name")
+	}
 	text := strings.ReplaceAll(d.Buffer.Text(), "\n", d.lineEnding)
 	if d.hasBOM {
 		text = bom + text
@@ -78,6 +101,18 @@ func (d *Document) Save() error {
 		return err
 	}
 	d.savedVersion = d.Buffer.Version()
+	return nil
+}
+
+// SaveAs saves the document at path, which it keeps from then on. If saving
+// fails, the document keeps its old path.
+func (d *Document) SaveAs(path string) error {
+	old := d.Path
+	d.Path = path
+	if err := d.Save(); err != nil {
+		d.Path = old
+		return err
+	}
 	return nil
 }
 

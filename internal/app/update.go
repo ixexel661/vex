@@ -43,6 +43,10 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) {
 		m.answer(key)
 		return
 	}
+	if m.prompt != nil {
+		m.promptKey(msg)
+		return
+	}
 	if m.searching {
 		m.searchKey(msg)
 		return
@@ -64,6 +68,9 @@ func (m *Model) handlePaste(text string) {
 	text = strings.ReplaceAll(text, "\r\n", "\n")
 	text = strings.ReplaceAll(text, "\r", "\n")
 	switch {
+	case m.prompt != nil:
+		line, _, _ := strings.Cut(text, "\n")
+		m.typeInPrompt(line)
 	case m.searching:
 		line, _, _ := strings.Cut(text, "\n")
 		m.typeInSearch(line)

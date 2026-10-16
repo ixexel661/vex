@@ -66,8 +66,11 @@ func (e *Editor) buffer() *buffer.Buffer {
 	return e.doc.Buffer
 }
 
+// scrollToCursor scrolls as little as the cursor needs, but never so far
+// that the window shows less text than it could.
 func (e *Editor) scrollToCursor() {
-	e.top = clamp(e.top, e.cursor.Row-e.height+1, e.cursor.Row)
+	lastTop := max(e.buffer().LineCount()-e.height, 0)
+	e.top = clamp(e.top, e.cursor.Row-e.height+1, min(e.cursor.Row, lastTop))
 	x := e.cursorColumn()
 	e.left = clamp(e.left, x-e.textWidth()+1, x)
 }

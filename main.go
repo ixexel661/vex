@@ -14,7 +14,6 @@ import (
 	"github.com/ixexel661/vex/internal/app"
 	"github.com/ixexel661/vex/internal/command"
 	"github.com/ixexel661/vex/internal/config"
-	"github.com/ixexel661/vex/internal/document"
 	"github.com/ixexel661/vex/internal/filetype"
 	"github.com/ixexel661/vex/internal/filetype/xml"
 	"github.com/ixexel661/vex/internal/keymap"
@@ -28,13 +27,15 @@ var builtinThemes embed.FS
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: vex <file>")
+		fmt.Fprintln(os.Stderr, "       vex new [file]")
 	}
 	flag.Parse()
-	if flag.NArg() != 1 {
+	err := run(flag.Args())
+	if errors.Is(err, errUsage) {
 		flag.Usage()
 		os.Exit(2)
 	}
-	if err := run(flag.Arg(0)); err != nil {
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "vex:", err)
 		os.Exit(1)
 	}
@@ -42,9 +43,9 @@ func main() {
 
 // run wires everything together. All registries are created here, so a
 // plugin loader can later extend them in one place.
-func run(path string) error {
+func run(args []string) error {
 	fileTypes := filetype.NewRegistry(xml.Type())
-	doc, err := document.Open(path, fileTypes.Detect(path))
+	doc, isNew, err := openDocument(args, fileTypes)
 	if err != nil {
 		return err
 	}
@@ -72,6 +73,8 @@ func run(path string) error {
 		Theme:      th,
 		Themes:     themes,
 		Warning:    errors.Join(installErr, configErr, themeErr),
+		NewFile:    isNew,
+		Version:    currentVersion(),
 	})
 	_, err = tea.NewProgram(model).Run()
 	return err

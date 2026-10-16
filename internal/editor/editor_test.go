@@ -94,6 +94,15 @@ func TestScrollingFollowsCursor(t *testing.T) {
 	}
 }
 
+func TestGrowingWindowShowsTextAbove(t *testing.T) {
+	e := newEditor(t, "a\nb\nc", 40, 1)
+	e.MoveBottom()
+	e.SetSize(40, 10)
+	if got := strings.Split(e.View(), "\n")[0]; got != "  1 a" {
+		t.Errorf("first visible line = %q, want line 1", got)
+	}
+}
+
 func TestTabsExpandToTabStops(t *testing.T) {
 	e := newEditor(t, "a\tb", 40, 1)
 	if got := e.View(); got != "  1 a   b" {

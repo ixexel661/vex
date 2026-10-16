@@ -27,6 +27,10 @@ type Setup struct {
 	// Warning is shown in the message line at the start, e.g. a broken
 	// config file.
 	Warning error
+	// NewFile starts in insert mode at the end of the file type's template.
+	NewFile bool
+	// Version is the version of vex, shown in the settings.
+	Version string
 }
 
 type Model struct {
@@ -37,11 +41,13 @@ type Model struct {
 	configPath string
 	theme      theme.Theme
 	themes     *theme.Store
+	version    string
 
 	mode          mode.Mode
 	width, height int
 	message       message
 	dialog        *dialog
+	prompt        *prompt
 	search        *search.Session
 	searching     bool
 	replaceQuery  bool
@@ -64,8 +70,13 @@ func New(doc *document.Document, s Setup) *Model {
 		configPath: s.ConfigPath,
 		theme:      s.Theme,
 		themes:     s.Themes,
+		version:    s.Version,
 		search:     search.NewSession(doc.Buffer, s.Matchers),
 		validation: validation{version: -1},
+	}
+	if s.NewFile {
+		m.SetMode(mode.Insert)
+		m.editor.MoveBottom()
 	}
 	m.reportError(s.Warning)
 	m.validate()

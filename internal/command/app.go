@@ -16,20 +16,16 @@ func quit(ctx Context) error {
 	}
 	ctx.Ask(fmt.Sprintf("Save changes to %s?", doc.Name()),
 		Choice{Key: "y", Label: "save", Run: saveAndQuit},
-		Choice{Key: "n", Label: "discard", Run: quitWithoutSaving},
+		Choice{Key: "n", Label: "discard", Run: quitNow},
 	)
 	return nil
 }
 
 func saveAndQuit(ctx Context) error {
-	if err := saveDocument(ctx); err != nil {
-		return err
-	}
-	ctx.Quit()
-	return nil
+	return save(ctx, quitNow)
 }
 
-func quitWithoutSaving(ctx Context) error {
+func quitNow(ctx Context) error {
 	ctx.Quit()
 	return nil
 }

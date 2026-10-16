@@ -9,6 +9,7 @@ func Type() filetype.Type {
 			".xml", ".xsd", ".xsl", ".xslt", ".svg", ".xhtml",
 			".rss", ".atom", ".wsdl", ".plist", ".csproj", ".xaml",
 		},
+		Template:    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n",
 		Highlighter: Highlighter{},
 		Formatter:   Formatter{},
 		Validator:   Validator{},

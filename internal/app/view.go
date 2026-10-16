@@ -33,15 +33,23 @@ func (m *Model) cursor() *tea.Cursor {
 	if m.settings != nil {
 		return nil
 	}
+	if m.prompt != nil {
+		return m.messageLineCursor(m.promptInput())
+	}
 	if m.searching {
-		c := tea.NewCursor(min(lipgloss.Width(m.searchInput()), m.width-1), m.height-1)
-		c.Shape = tea.CursorBar
-		return c
+		return m.messageLineCursor(m.searchInput())
 	}
 	x, y := m.editor.CursorPosition()
 	c := tea.NewCursor(x, y)
 	if m.mode == mode.Insert {
 		c.Shape = tea.CursorBar
 	}
+	return c
+}
+
+// messageLineCursor puts a bar cursor after input in the message line.
+func (m *Model) messageLineCursor(input string) *tea.Cursor {
+	c := tea.NewCursor(min(lipgloss.Width(input), m.width-1), m.height-1)
+	c.Shape = tea.CursorBar
 	return c
 }

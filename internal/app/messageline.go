@@ -6,6 +6,8 @@ func (m *Model) messageLine() string {
 	switch {
 	case m.dialog != nil:
 		return m.question()
+	case m.prompt != nil:
+		return m.promptLine()
 	case m.searching:
 		return m.searchBar()
 	case m.message.isError:

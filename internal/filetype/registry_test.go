@@ -20,3 +20,13 @@ func TestDetect(t *testing.T) {
 		}
 	}
 }
+
+func TestDefault(t *testing.T) {
+	if got := NewRegistry().Default().Name; got != "Text" {
+		t.Errorf("Default() of an empty registry = %q, want Text", got)
+	}
+	r := NewRegistry(Type{Name: "XML"}, Type{Name: "JSON"})
+	if got := r.Default().Name; got != "XML" {
+		t.Errorf("Default() = %q, want the first type, XML", got)
+	}
+}

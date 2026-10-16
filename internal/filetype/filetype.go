@@ -2,6 +2,7 @@ package filetype
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/ixexel661/vex/internal/buffer"
 	"github.com/ixexel661/vex/internal/config"
@@ -11,12 +12,22 @@ import (
 // Type describes how vex handles one kind of file. Every capability is
 // optional, nil means the file type does not support it.
 type Type struct {
-	Name        string
-	Extensions  []string
+	Name       string
+	Extensions []string
+	// Template is the text a new file starts with.
+	Template    string
 	Highlighter highlight.Highlighter
 	Formatter   Formatter
 	Validator   Validator
 	Tags        Tags
+}
+
+// FileName returns name with the first extension of the type if it has none.
+func (t Type) FileName(name string) string {
+	if filepath.Ext(name) != "" || len(t.Extensions) == 0 {
+		return name
+	}
+	return name + t.Extensions[0]
 }
 
 type Formatter interface {
