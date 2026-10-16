@@ -6,6 +6,55 @@ A small terminal editor for XML files, built with
 
 ## Install
 
+On Linux and macOS, run the line of your shell:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ixexel661/vex/main/install/install.bash | bash
+curl -fsSL https://raw.githubusercontent.com/ixexel661/vex/main/install/install.zsh | zsh
+curl -fsSL https://raw.githubusercontent.com/ixexel661/vex/main/install/install.fish | fish
+```
+
+On Windows, in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/ixexel661/vex/main/install/install.ps1 | iex
+```
+
+The script downloads the binary of the latest release for your system and
+processor, checks it against `SHA256SUMS` and puts it in `~/.local/bin`
+(`%LOCALAPPDATA%\Programs\vex` on Windows). If that directory is not in your
+`PATH` yet, the script adds it in the startup file of your shell
+(`~/.bashrc`, `~/.bash_profile` on macOS, `~/.zshrc` or
+`~/.config/fish/conf.d/vex.fish`), and on Windows in the `PATH` of your
+user. Running it again updates vex. vex creates its settings and themes
+itself when it starts for the first time.
+
+`VEX_VERSION` installs a certain release and `VEX_INSTALL_DIR` puts vex into
+another directory:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ixexel661/vex/main/install/install.bash | VEX_VERSION=v1.2.0 bash
+```
+
+In PowerShell, set them before: `$env:VEX_VERSION = "v1.2.0"`.
+
+### Uninstall
+
+The same scripts remove vex again, together with its `PATH` entry, its
+settings and its themes:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ixexel661/vex/main/install/install.bash | bash -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/ixexel661/vex/main/install/install.zsh | zsh -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/ixexel661/vex/main/install/install.fish | fish -c 'source - --uninstall'
+```
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/ixexel661/vex/main/install/install.ps1))) -Uninstall
+```
+
+### By hand
+
 Every [release](https://github.com/ixexel661/vex/releases) has a binary for
 Linux, macOS and Windows on x64 and ARM64: `vex-linux-amd64`,
 `vex-linux-arm64`, `vex-darwin-amd64`, `vex-darwin-arm64`,
@@ -176,6 +225,7 @@ main.go                 wires everything together
 new.go                  the arguments, and the files vex new creates
 version.go              the version the settings show
 .github/workflows/      the release build
+install/                the install scripts
 themes/                 themes built into vex
 internal/
   app/                  Bubble Tea model: keys -> commands, layout, dialogs
