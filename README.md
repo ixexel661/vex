@@ -6,6 +6,17 @@ A small terminal editor for XML files, built with
 
 ## Install
 
+Every [release](https://github.com/ixexel661/vex/releases) has a binary for
+Linux, macOS and Windows on x64 and ARM64: `vex-linux-amd64`,
+`vex-linux-arm64`, `vex-darwin-amd64`, `vex-darwin-arm64`,
+`vex-windows-amd64.exe` and `vex-windows-arm64.exe`. `SHA256SUMS` lists their
+checksums. Rename the binary to `vex` (`vex.exe` on Windows), put it in a
+directory in your `PATH` and, on Linux and macOS, make it executable with
+`chmod +x vex`. The binaries are not signed, so after a download in the
+browser, macOS needs `xattr -d com.apple.quarantine vex` before it runs it.
+
+With Go installed:
+
 ```sh
 go install github.com/ixexel661/vex@latest
 ```
@@ -23,6 +34,17 @@ vex opens the file in normal mode with syntax highlighting and line numbers.
 Press `i` to edit and `esc` to stop editing. A file that does not exist yet is
 created on the first save. The status bar shows whether the document is
 well-formed XML and, if not, the line of the first error.
+
+```sh
+vex new file.xml
+vex new
+```
+
+`vex new file.xml` creates the file with an XML declaration and opens it in
+insert mode below it. A name without an extension gets `.xml`. If the file
+exists already, vex asks before it overwrites it. `vex new` without a name
+starts an `untitled` document and asks for the name when you save it. To
+open a file called `new`, use `vex ./new`.
 
 | Mode   | Keys                                  | Action                                    |
 |--------|---------------------------------------|-------------------------------------------|
@@ -89,7 +111,8 @@ formatted one, which is then a change to save.
 | `enter`           | save the settings to the config file    |
 | `esc`, `ctrl+c`   | cancel, the settings go back            |
 
-The config file is `~/.config/vex/config.toml` (on macOS
+The bottom line of the settings shows the version of vex and where the
+config file is: `~/.config/vex/config.toml` (on macOS
 `~/Library/Application Support/vex`, on Windows `%AppData%\vex`). vex
 creates it on the first start, and you can also change it by hand:
 
@@ -132,10 +155,27 @@ A style can have a foreground (`fg`) and a background (`bg`) color and be
 your own, copy `basic.toml` and change it. It only needs the styles it
 changes, the others come from the basic theme built into vex.
 
+## Releases
+
+Pushing a tag that starts with `v` builds a release:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow in `.github/workflows/release.yml` runs the tests, builds the
+six binaries and publishes them with their checksums as the release of the
+tag. Tags with a `-`, like `v1.1.0-beta`, become pre-releases. The settings
+show the version of the tag, builds from a checkout show `dev`.
+
 ## Project layout
 
 ```
 main.go                 wires everything together
+new.go                  the arguments, and the files vex new creates
+version.go              the version the settings show
+.github/workflows/      the release build
 themes/                 themes built into vex
 internal/
   app/                  Bubble Tea model: keys -> commands, layout, dialogs
@@ -162,8 +202,8 @@ internal/
 
 **A new file format:** create `internal/filetype/<format>` with a function
 returning a `filetype.Type`. Only fill in what the format supports
-(`Highlighter`, `Formatter`, `Validator`, `Tags`), then register it in
-`main.go`.
+(`Template`, `Highlighter`, `Formatter`, `Validator`, `Tags`), then register
+it in `main.go`. The first registered type is the one of `vex new`.
 
 **A new search mode:** implement `search.Matcher` in `internal/search`, e.g.
 for regular expressions or XPath, and add it to the matchers in `main.go`.
