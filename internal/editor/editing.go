@@ -30,8 +30,9 @@ func (e *Editor) DeleteForward() {
 
 // replace puts text in place of the text from "from" up to "to" at the
 // cursor and leaves the cursor after it. With linked editing, a change to a
-// tag name also happens in the other name of the pair. The later of the two
-// changes comes first, so it doesn't move the other one.
+// tag name also happens in the other name of the pair, which then stays
+// known. The later of the two changes comes first, so it doesn't move the
+// other one.
 func (e *Editor) replace(from, to buffer.Position, text string) {
 	twin, linked := e.twin(from, to, text)
 	twinAfter := linked && from.Before(twin.Start)
@@ -45,16 +46,20 @@ func (e *Editor) replace(from, to buffer.Position, text string) {
 			e.cursor.Col += utf8.RuneCountInString(text) - (twin.End.Col - twin.Start.Col)
 		}
 	}
+	if linked {
+		e.knownPair = e.knownPair.renamed(from, to, text, e.buffer().Version())
+	}
 	e.setCursor(e.cursor)
 }
 
 // change puts text in place of r and returns where the text ends.
-// Highlighting is refreshed from the row of r on.
 func (e *Editor) change(r buffer.Range, text string) buffer.Position {
 	e.buffer().Delete(r.Start, r.End)
-	e.highlights.Invalidate(r.Start.Row)
-	if text == "" {
-		return r.Start
+	end := r.Start
+	if text != "" {
+		end = e.buffer().Insert(r.Start, text)
 	}
-	return e.buffer().Insert(r.Start, text)
+	e.highlights.Edit(e.buffer(), r.Start.Row, r.End.Row-r.Start.Row, end.Row-r.Start.Row)
+	e.moveProblems(r.Start, r.End, end)
+	return end
 }

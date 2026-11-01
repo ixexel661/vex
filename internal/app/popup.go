@@ -25,11 +25,23 @@ func (m *Model) popup(title string, lines []string) string {
 
 // overlay draws box over the middle of the editor in content, the screen.
 func (m *Model) overlay(content, box string) string {
-	box = lipgloss.NewStyle().MaxWidth(m.width).MaxHeight(m.height).Render(box)
-	x := max((m.width-lipgloss.Width(box))/2, 0)
-	y := max((m.editorHeight()-lipgloss.Height(box))/2, 0)
+	box = m.fit(box)
+	x, y := m.boxPosition(box)
 	return lipgloss.NewCompositor(
 		lipgloss.NewLayer(content),
 		lipgloss.NewLayer(box).X(x).Y(y).Z(1),
 	).Render()
+}
+
+// fit cuts box to the screen.
+func (m *Model) fit(box string) string {
+	return lipgloss.NewStyle().MaxWidth(m.width).MaxHeight(m.height).Render(box)
+}
+
+// boxPosition is where overlay draws box: in the middle of the editor.
+func (m *Model) boxPosition(box string) (x, y int) {
+	box = m.fit(box)
+	x = max((m.width-lipgloss.Width(box))/2, 0)
+	y = max((m.editorHeight()-lipgloss.Height(box))/2, 0)
+	return x, y
 }

@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/ixexel661/vex/internal/command"
+	"github.com/ixexel661/vex/internal/printable"
 )
 
 const promptHints = "enter confirm · esc cancel"
@@ -45,7 +46,7 @@ func (m *Model) typeInPrompt(text string) {
 
 // promptInput is the part of the prompt line up to the end of the text.
 func (m *Model) promptInput() string {
-	return m.theme.Question.Render(m.prompt.label) + " " + printable(m.prompt.text)
+	return m.theme.Question.Render(m.prompt.label) + " " + printable.String(m.prompt.text)
 }
 
 func (m *Model) promptLine() string {

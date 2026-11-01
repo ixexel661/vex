@@ -24,7 +24,8 @@ func newUnnamedModel(t *testing.T) (*Model, string) {
 	s := setup(dir, theme.Theme{})
 	s.NewFile = true
 	m := New(document.New("", xml.Type()), s)
-	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	settle(m, m.Init())
+	resize(m, 80, 24)
 	return m, dir
 }
 

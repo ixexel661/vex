@@ -1,6 +1,8 @@
 package editor
 
 import (
+	"unicode/utf8"
+
 	"github.com/ixexel661/vex/internal/buffer"
 	"github.com/ixexel661/vex/internal/filetype"
 	"github.com/ixexel661/vex/internal/highlight"
@@ -34,7 +36,7 @@ func (e *Editor) MoveToPrevTag() {
 }
 
 func (e *Editor) MoveToParent() {
-	e.jump(filetype.Tags.Parent)
+	e.jumpNearFirst(filetype.Tags.Parent)
 }
 
 func (e *Editor) MoveToFirstChild() {
@@ -53,13 +55,64 @@ func (e *Editor) jump(find func(filetype.Tags, filetype.Source, buffer.Position)
 	}
 }
 
+// nearRows is how far from the cursor the editor looks for the other tag of
+// a pair at once. Further away, a job of FindPair looks for it.
+const nearRows = 5000
+
+// tagPair is a tag name and what the editor knows about the other name of its
+// element, in one version of the text.
+type tagPair struct {
+	version     int
+	name, other buffer.Range
+	ok          bool // other is the other name
+	far         bool // the other name may be further away than nearRows
+}
+
 // pair returns the tag name at the cursor and the other name of its element.
 func (e *Editor) pair() (name, other buffer.Range, ok bool) {
-	tags := e.doc.Type.Tags
-	if !e.linkedEditing || tags == nil {
+	p := e.cursorPair()
+	if p == nil {
 		return name, other, false
 	}
-	return tags.Pair(e.source(), e.cursor)
+	return p.name, p.other, p.ok
+}
+
+// cursorPair returns the tag pair at the cursor, or nil if the cursor is not
+// at a tag name. It looks for each name only once per version of the text.
+func (e *Editor) cursorPair() *tagPair {
+	tags := e.doc.Type.Tags
+	if !e.linkedEditing || tags == nil {
+		return nil
+	}
+	version := e.buffer().Version()
+	if p := e.knownPair; p != nil && p.version == version && contains(p.name, e.cursor) {
+		return p
+	}
+	w := e.near()
+	name, other, ok := tags.Pair(w, w.in(e.cursor))
+	if name == (buffer.Range{}) {
+		return nil
+	}
+	e.knownPair = &tagPair{version: version, name: w.outRange(name), other: w.outRange(other), ok: ok, far: !ok && w.cut()}
+	return e.knownPair
+}
+
+// renamed returns the pair after the same change went into both names: the
+// text from "from" up to "to" of the name became text.
+func (p *tagPair) renamed(from, to buffer.Position, text string, version int) *tagPair {
+	delta := utf8.RuneCountInString(text) - (to.Col - from.Col)
+	name, other := p.name, p.other
+	name.End.Col += delta
+	other.End.Col += delta
+	if name.Start.Row == other.Start.Row {
+		later := &other
+		if other.Start.Before(name.Start) {
+			later = &name
+		}
+		later.Start.Col += delta
+		later.End.Col += delta
+	}
+	return &tagPair{version: version, name: name, other: other, ok: true}
 }
 
 func (e *Editor) pairMarks() map[int][]highlight.Span {
@@ -92,17 +145,73 @@ func contains(r buffer.Range, p buffer.Position) bool {
 	return !p.Before(r.Start) && !r.End.Before(p)
 }
 
-// source shows the buffer to file types, together with the highlighter
-// state at the start of each line.
+// source shows the text to file types, together with the highlighter state
+// at the start of each line.
 type source struct {
-	*buffer.Buffer
+	highlight.Lines
 	highlights *highlight.Cache
 }
 
 func (s source) State(row int) highlight.State {
-	return s.highlights.State(s.Buffer, row)
+	return s.highlights.State(s.Lines, row)
 }
 
 func (e *Editor) source() filetype.Source {
 	return source{e.buffer(), e.highlights}
+}
+
+// snapshot returns the text and its highlighting for another goroutine,
+// which calls release when it is done with them.
+func (e *Editor) snapshot() (src filetype.Source, release func()) {
+	lines := e.buffer().Snapshot()
+	return source{lines, e.highlights.Clone()}, lines.Release
+}
+
+// window shows the rows from top up to bottom of a source as a document of
+// their own, so a search in it stops at its edges.
+type window struct {
+	filetype.Source
+	top, bottom int
+}
+
+// near returns the rows up to nearRows away from the cursor.
+func (e *Editor) near() window {
+	return window{
+		Source: e.source(),
+		top:    max(e.cursor.Row-nearRows, 0),
+		bottom: min(e.cursor.Row+nearRows+1, e.buffer().LineCount()),
+	}
+}
+
+func (w window) LineCount() int {
+	return w.bottom - w.top
+}
+
+func (w window) Line(row int) string {
+	return w.Source.Line(w.top + row)
+}
+
+func (w window) State(row int) highlight.State {
+	return w.Source.State(w.top + row)
+}
+
+// cut reports whether the window leaves out rows of its source.
+func (w window) cut() bool {
+	return w.top > 0 || w.bottom < w.Source.LineCount()
+}
+
+// in turns a position in the source into one in the window, out and
+// outRange do the opposite.
+func (w window) in(p buffer.Position) buffer.Position {
+	p.Row -= w.top
+	return p
+}
+
+func (w window) out(p buffer.Position) buffer.Position {
+	p.Row += w.top
+	return p
+}
+
+func (w window) outRange(r buffer.Range) buffer.Range {
+	return buffer.Range{Start: w.out(r.Start), End: w.out(r.End)}
 }

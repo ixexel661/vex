@@ -1,9 +1,9 @@
 package xml
 
 import (
-	"slices"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/ixexel661/vex/internal/highlight"
 )
@@ -27,7 +27,7 @@ type block struct {
 	after       highlight.State
 }
 
-var blocks = map[highlight.State]block{
+var blocks = [...]block{
 	inDoubleQuoted: {`"`, `"`, highlight.String, inTag},
 	inSingleQuoted: {"'", "'", highlight.String, inTag},
 	inComment:      {"<!--", "-->", highlight.Comment, inText},
@@ -50,18 +50,31 @@ func (Highlighter) Highlight(line []rune, state highlight.State) ([]highlight.Sp
 // lex reads a line that starts in state.
 func lex(line []rune, state highlight.State) *lexer {
 	l := &lexer{line: line, state: state}
-	for l.pos < len(l.line) {
-		l.step()
-	}
+	l.run()
 	return l
 }
 
+// lexParts reads a line for Tags, which only needs its parts, and appends
+// them to dst.
+func lexParts(dst []part, line []rune, state highlight.State) []part {
+	l := lexer{line: line, state: state, parts: dst, partsOnly: true}
+	l.run()
+	return l.parts
+}
+
 type lexer struct {
-	line  []rune
-	pos   int
-	state highlight.State
-	spans []highlight.Span
-	parts []part // the names and ends of tags, for Tags
+	line      []rune
+	pos       int
+	state     highlight.State
+	spans     []highlight.Span
+	parts     []part // the names and ends of tags, for Tags
+	partsOnly bool   // no spans
+}
+
+func (l *lexer) run() {
+	for l.pos < len(l.line) {
+		l.step()
+	}
 }
 
 func (l *lexer) step() {
@@ -76,14 +89,14 @@ func (l *lexer) step() {
 }
 
 func (l *lexer) text() {
-	for _, state := range markup {
-		if open := blocks[state].open; l.hasPrefix(open) {
-			l.block(state, len(open))
-			return
-		}
-	}
 	switch l.line[l.pos] {
 	case '<':
+		for _, state := range markup {
+			if open := blocks[state].open; l.hasPrefix(open) {
+				l.block(state, len(open))
+				return
+			}
+		}
 		l.openTag()
 	case '&':
 		l.entity()
@@ -163,7 +176,9 @@ func (l *lexer) block(state highlight.State, skip int) {
 }
 
 func (l *lexer) take(n int, kind highlight.Kind) {
-	l.spans = append(l.spans, highlight.Span{Start: l.pos, End: l.pos + n, Kind: kind})
+	if !l.partsOnly {
+		l.spans = append(l.spans, highlight.Span{Start: l.pos, End: l.pos + n, Kind: kind})
+	}
 	l.pos += n
 }
 
@@ -178,15 +193,23 @@ func (l *lexer) takeWhile(kind highlight.Kind, match func(rune) bool) {
 }
 
 func (l *lexer) hasPrefix(s string) bool {
-	pattern := []rune(s)
-	rest := l.line[l.pos:]
-	return len(rest) >= len(pattern) && slices.Equal(rest[:len(pattern)], pattern)
+	return hasPrefixAt(l.line, l.pos, s)
+}
+
+// hasPrefixAt reports whether the runes from i on start with s.
+func hasPrefixAt(runes []rune, i int, s string) bool {
+	for _, r := range s {
+		if i >= len(runes) || runes[i] != r {
+			return false
+		}
+		i++
+	}
+	return true
 }
 
 func index(runes []rune, s string) int {
-	pattern := []rune(s)
-	for i := 0; i+len(pattern) <= len(runes); i++ {
-		if slices.Equal(runes[i:i+len(pattern)], pattern) {
+	for i := range runes {
+		if hasPrefixAt(runes, i, s) {
 			return i
 		}
 	}
@@ -194,5 +217,11 @@ func index(runes []rune, s string) int {
 }
 
 func isNameRune(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsDigit(r) || strings.ContainsRune("_:-.", r)
+	switch {
+	case 'a' <= r && r <= 'z', 'A' <= r && r <= 'Z', '0' <= r && r <= '9', strings.ContainsRune("_:-.", r):
+		return true
+	case r < utf8.RuneSelf:
+		return false
+	}
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }

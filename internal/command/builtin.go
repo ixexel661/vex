@@ -14,6 +14,7 @@ func Builtins() []Command {
 		documentCommands(),
 		searchCommands(),
 		settingsCommands(),
+		schemaCommands(),
 		cursorCommands(),
 		editCommands(),
 	)

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="lib">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ref" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType><xs:attribute name="to" type="xs:string"/></xs:complexType>
+        </xs:element>
+        <xs:element name="b" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType><xs:attribute name="id" type="xs:string"/></xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+    <xs:key name="id">
+      <xs:selector xpath="b"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+    <xs:keyref name="to" refer="id">
+      <xs:selector xpath="ref"/>
+      <xs:field xpath="@to"/>
+    </xs:keyref>
+  </xs:element>
+</xs:schema>

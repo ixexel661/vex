@@ -50,11 +50,13 @@ func (e *Editor) MoveTo(p buffer.Position) {
 
 func (e *Editor) moveRows(delta int) {
 	e.cursor = e.buffer().Clamp(buffer.Position{Row: e.cursor.Row + delta, Col: e.goalCol})
+	e.farJump = nil
 	e.scrollToCursor()
 }
 
 func (e *Editor) setCursor(p buffer.Position) {
 	e.cursor = p
+	e.farJump = nil
 	e.goalCol = p.Col
 	e.scrollToCursor()
 }

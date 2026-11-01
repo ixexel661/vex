@@ -19,6 +19,7 @@ type Type struct {
 	Highlighter highlight.Highlighter
 	Formatter   Formatter
 	Validator   Validator
+	Schemas     SchemaValidator
 	Tags        Tags
 }
 
@@ -50,11 +51,37 @@ type Validator interface {
 	Validate(src string) error
 }
 
+// MaxProblems is how many problems a SchemaCheck finds at most.
+const MaxProblems = 10_000
+
+// SchemaValidator checks documents against schema files, e.g. XSD.
+type SchemaValidator interface {
+	// Name is the kind of schema, e.g. "XSD".
+	Name() string
+	// Load reads the schemas, whose paths are absolute.
+	Load(schemas []config.Schema) (SchemaCheck, error)
+	// Named returns the schemas src names itself, e.g. in
+	// xsi:schemaLocation. Without them, it returns the namespace of the root
+	// element with an empty path.
+	Named(src string) []config.Schema
+}
+
+// SchemaCheck returns what is wrong in src against the schemas it was
+// loaded from, sorted by position. It can run in several goroutines at once.
+type SchemaCheck func(src string) []Problem
+
+// Problem is something wrong in a document. Range is the text it is about.
+type Problem struct {
+	Range   buffer.Range
+	Message string
+}
+
 // Tags pairs the start and end tags of elements, so the editor can mark and
 // rename both names at once and add the end tag as a start tag is typed. It
 // also finds tags for the cursor to jump to, at the start of the tag.
 type Tags interface {
-	// Pair returns the name of the tag at p and the name of the other tag of its element.
+	// Pair returns the name of the tag at p and the name of the other tag of its
+	// element. Without a tag name at p, name is the zero Range.
 	Pair(src Source, p buffer.Position) (name, other buffer.Range, ok bool)
 	// IsName reports whether text can go into a tag name.
 	IsName(text string) bool

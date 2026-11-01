@@ -4,6 +4,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/ixexel661/vex/internal/buffer"
@@ -105,6 +107,13 @@ func TestNew(t *testing.T) {
 	}
 }
 
+func TestNameHasNoControlCharacters(t *testing.T) {
+	doc := New("/tmp/a\a\x1b]52;c;eA==\a.xml", filetype.Type{})
+	if got, want := doc.Name(), "a??]52;c;eA==?.xml"; got != want {
+		t.Errorf("Name() = %q, want %q", got, want)
+	}
+}
+
 func TestSaveAs(t *testing.T) {
 	dir := t.TempDir()
 	doc := New("", filetype.Plain())
@@ -160,5 +169,37 @@ func TestValidate(t *testing.T) {
 	}
 	if err := empty.Validate(); err != nil {
 		t.Errorf("Validate() on empty document = %v, want nil", err)
+	}
+}
+
+func TestValidationChecksTheTextFromItsStart(t *testing.T) {
+	doc := New("", filetype.Type{Name: "Strict", Validator: rejectAll{}})
+	check := doc.Validation()
+	doc.Buffer.SetText("<a/>")
+	if err := check().Err; err != nil {
+		t.Errorf("the check of the empty text saw the text after it: %v", err)
+	}
+}
+
+// copiesLines reports whether an edit copies the list of lines, which the
+// buffer does while a snapshot is not released.
+func copiesLines(doc *Document) bool {
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	doc.Buffer.Insert(buffer.Position{}, "x")
+	runtime.ReadMemStats(&after)
+	return after.TotalAlloc-before.TotalAlloc > uint64(doc.Buffer.LineCount()*8)
+}
+
+func TestValidationReleasesItsSnapshot(t *testing.T) {
+	doc := New("", filetype.Type{Name: "Strict", Validator: rejectAll{}})
+	doc.Buffer.SetText(strings.Repeat("<a/>\n", 10_000))
+	doc.Validation()
+	if !copiesLines(doc) {
+		t.Fatal("an edit does not copy the lines while the check reads them")
+	}
+	doc.Validation()()
+	if copiesLines(doc) {
+		t.Error("an edit copies the lines after the check is done")
 	}
 }

@@ -1,7 +1,9 @@
 package buffer
 
 import (
+	"cmp"
 	"strings"
+	"sync/atomic"
 	"unicode/utf8"
 )
 
@@ -15,6 +17,12 @@ func (p Position) Before(q Position) bool {
 	return p.Row < q.Row || p.Row == q.Row && p.Col < q.Col
 }
 
+// Compare returns -1 if p comes before q, 1 if it comes after q and 0 if
+// they are the same.
+func (p Position) Compare(q Position) int {
+	return cmp.Or(cmp.Compare(p.Row, q.Row), cmp.Compare(p.Col, q.Col))
+}
+
 // Range is the text from Start up to, but not including, End.
 type Range struct {
 	Start, End Position
@@ -23,10 +31,17 @@ type Range struct {
 type Buffer struct {
 	lines   []string
 	version int
+	readers *atomic.Int32 // snapshots that still read lines
 }
 
 func New(text string) *Buffer {
-	return &Buffer{lines: strings.Split(text, "\n")}
+	return &Buffer{lines: split(text, false)}
+}
+
+// NewCRLF is New for text with "\r\n" line endings, whose "\r" goes with the
+// line break.
+func NewCRLF(text string) *Buffer {
+	return &Buffer{lines: split(text, true)}
 }
 
 func (b *Buffer) Text() string {
@@ -34,7 +49,8 @@ func (b *Buffer) Text() string {
 }
 
 func (b *Buffer) SetText(text string) {
-	b.lines = strings.Split(text, "\n")
+	b.lines = split(text, false)
+	b.readers = nil
 	b.version++
 }
 

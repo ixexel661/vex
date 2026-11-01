@@ -14,6 +14,7 @@ func (b *Buffer) Insert(p Position, text string) Position {
 	parts[0] = before + parts[0]
 	end := Position{Row: p.Row + last, Col: utf8.RuneCountInString(parts[last])}
 	parts[last] += after
+	b.own()
 	b.lines = slices.Replace(b.lines, p.Row, p.Row+1, parts...)
 	b.version++
 	return end
@@ -26,6 +27,7 @@ func (b *Buffer) Delete(from, to Position) {
 	}
 	head, _ := b.split(from)
 	_, tail := b.split(to)
+	b.own()
 	b.lines = slices.Replace(b.lines, from.Row, to.Row+1, head+tail)
 	b.version++
 }

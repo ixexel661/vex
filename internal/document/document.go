@@ -7,10 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/ixexel661/vex/internal/buffer"
 	"github.com/ixexel661/vex/internal/filetype"
+	"github.com/ixexel661/vex/internal/printable"
 )
 
 const bom = "\uFEFF"
@@ -24,6 +26,7 @@ type Document struct {
 	lineEnding   string
 	hasBOM       bool
 	savedVersion int
+	schemas      *schemaSet
 }
 
 // Open reads the file at path. A missing file gives an empty document,
@@ -41,15 +44,14 @@ func Open(path string, fileType filetype.Type) (*Document, error) {
 	}
 
 	text, hasBOM := strings.CutPrefix(string(data), bom)
-	lineEnding := "\n"
+	newBuffer, lineEnding := buffer.New, "\n"
 	if strings.Contains(text, "\r\n") {
-		lineEnding = "\r\n"
-		text = strings.ReplaceAll(text, "\r\n", "\n")
+		newBuffer, lineEnding = buffer.NewCRLF, "\r\n"
 	}
 	return &Document{
 		Path:       path,
 		Type:       fileType,
-		Buffer:     buffer.New(text),
+		Buffer:     newBuffer(text),
 		lineEnding: lineEnding,
 		hasBOM:     hasBOM,
 	}, nil
@@ -72,11 +74,13 @@ func Exists(path string) bool {
 	return err == nil
 }
 
+// Name is the file name to show. Control characters in it are replaced, so
+// a file name cannot send escape sequences to the terminal.
 func (d *Document) Name() string {
 	if d.Path == "" {
 		return "untitled"
 	}
-	return filepath.Base(d.Path)
+	return printable.String(filepath.Base(d.Path))
 }
 
 func (d *Document) Modified() bool {
@@ -116,12 +120,55 @@ func (d *Document) SaveAs(path string) error {
 	return nil
 }
 
-// Validate checks the text with the validator of the file type. Empty
-// documents and file types without a validator count as valid.
+// Validity is the result of a check of a document.
+type Validity struct {
+	Err error // why the text is not well-formed
+	// Schema reports whether the text was checked against schemas.
+	// SchemaErr says why they could not be loaded, Problems what is wrong
+	// in the text against them.
+	Schema    bool
+	SchemaErr error
+	Problems  []filetype.Problem
+}
+
+// Validate checks that the text is well-formed with the validator of the
+// file type. Empty documents and file types without a validator count as
+// valid.
 func (d *Document) Validate() error {
-	text := d.Buffer.Text()
-	if d.Type.Validator == nil || strings.TrimSpace(text) == "" {
-		return nil
+	return d.Validation()().Err
+}
+
+// Validation returns a check of the text as it is now, which can run in
+// another goroutine while the text changes. It is meant to run once. With
+// schemas, it checks the text against them at the same time.
+func (d *Document) Validation() func() Validity {
+	validator, snapshot := d.Type.Validator, d.Buffer.Snapshot()
+	schemaValidator, schemas := d.Type.Schemas, d.schemas
+	return func() Validity {
+		text := snapshot.Text()
+		snapshot.Release()
+		v := Validity{Schema: schemas != nil}
+		if strings.TrimSpace(text) == "" {
+			return v
+		}
+		var wg sync.WaitGroup
+		if schemas != nil {
+			wg.Go(func() {
+				check, err := schemas.load(schemaValidator)
+				if err != nil {
+					v.SchemaErr = err
+					return
+				}
+				v.Problems = check(text)
+			})
+		}
+		if validator != nil {
+			v.Err = validator.Validate(text)
+		}
+		wg.Wait()
+		if v.Err != nil {
+			v.SchemaErr, v.Problems = nil, nil
+		}
+		return v
 	}
-	return d.Type.Validator.Validate(text)
 }

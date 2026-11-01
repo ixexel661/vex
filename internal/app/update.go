@@ -17,13 +17,25 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleKey(msg)
 	case tea.PasteMsg:
 		m.handlePaste(msg.Content)
+	case validatedMsg:
+		m.validated(msg)
+	case prefetchedMsg:
+		m.prefetched(msg)
+	case foundPairMsg:
+		m.foundPair(msg)
+	case jumpedMsg:
+		m.jumped(msg)
 	}
 	m.layout()
-	m.validate()
 	if m.quitting {
 		return m, tea.Quit
 	}
-	return m, nil
+	return m, m.background()
+}
+
+// background starts the work that runs in other goroutines.
+func (m *Model) background() tea.Cmd {
+	return tea.Batch(m.validate(), m.prefetch(), m.findPair(), m.findJump())
 }
 
 func (m *Model) layout() {
@@ -51,6 +63,14 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) {
 		m.searchKey(msg)
 		return
 	}
+	if m.schemaPopup != nil {
+		m.schemaKey(msg)
+		return
+	}
+	if m.problemList != nil {
+		m.problemKey(key)
+		return
+	}
 	if m.settings != nil {
 		m.settingsKey(key)
 		return
@@ -74,6 +94,9 @@ func (m *Model) handlePaste(text string) {
 	case m.searching:
 		line, _, _ := strings.Cut(text, "\n")
 		m.typeInSearch(line)
+	case m.schemaPopup != nil:
+		line, _, _ := strings.Cut(text, "\n")
+		m.schemaPopup.fields[m.schemaPopup.focused].insert(line)
 	case m.mode == mode.Insert:
 		m.editor.InsertText(text)
 	default:

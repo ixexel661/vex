@@ -33,6 +33,8 @@ func Default() *Keymap {
 		{"s", "settings.open"},
 		{"q", "app.quit"},
 		{"ctrl+c", "app.quit"},
+		{"v", "schema.problems"},
+		{"V", "schema.edit"},
 	}
 	insert := []Binding{
 		{"esc", "mode.normal"},

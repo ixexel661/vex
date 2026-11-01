@@ -65,6 +65,14 @@ func TestCreateDocumentAsksBeforeOverwriting(t *testing.T) {
 	}
 }
 
+func TestConfirmShowsNoControlCharacters(t *testing.T) {
+	var out strings.Builder
+	confirm(strings.NewReader("n\n"), &out, "a\x1b]52;c;eA==\a.xml exists already.")
+	if want := "a?]52;c;eA==?.xml exists already. [y/N] "; out.String() != want {
+		t.Errorf("question = %q, want %q", out.String(), want)
+	}
+}
+
 func TestOpenDocument(t *testing.T) {
 	doc, isNew, err := openDocument([]string{"new"}, fileTypes())
 	if err != nil || !isNew || doc.Path != "" || doc.Type.Name != "XML" {

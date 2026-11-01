@@ -18,10 +18,13 @@ func (m *Model) View() tea.View {
 	line := lipgloss.NewStyle().MaxWidth(m.width)
 	content := m.editor.View()
 	if height := m.listHeight(); height > 0 {
-		content += "\n" + line.Render(m.matchList(height))
+		content += "\n" + line.Render(m.listView(height))
 	}
 	content += "\n" + line.Render(m.statusBar()) + "\n" + line.Render(m.messageLine())
-	if m.settings != nil {
+	switch {
+	case m.schemaPopup != nil:
+		content = m.overlay(content, m.schemaBox())
+	case m.settings != nil:
 		content = m.overlay(content, m.settingsBox())
 	}
 	v.SetContent(content)
@@ -30,6 +33,9 @@ func (m *Model) View() tea.View {
 }
 
 func (m *Model) cursor() *tea.Cursor {
+	if m.schemaPopup != nil {
+		return m.schemaCursor()
+	}
 	if m.settings != nil {
 		return nil
 	}

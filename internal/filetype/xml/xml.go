@@ -13,6 +13,7 @@ func Type() filetype.Type {
 		Highlighter: Highlighter{},
 		Formatter:   Formatter{},
 		Validator:   Validator{},
+		Schemas:     Schemas{},
 		Tags:        Tags{},
 	}
 }

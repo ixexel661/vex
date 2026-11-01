@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,21 +47,56 @@ func newModelWithTheme(t *testing.T, content string, th theme.Theme) (*Model, st
 		t.Fatal(err)
 	}
 	m := New(doc, setup(dir, th))
-	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	settle(m, m.Init())
+	resize(m, 80, 24)
 	return m, path
+}
+
+// resize tells m the size of the terminal, as Bubble Tea does at the start.
+func resize(m *Model, width, height int) {
+	_, cmd := m.Update(tea.WindowSizeMsg{Width: width, Height: height})
+	settle(m, cmd)
+}
+
+// settle runs cmd like Bubble Tea would and hands its message to m, and so
+// on with the next command, until there is none left or m quits. Commands
+// that go on and on, like jobs that keep starting each other, make it panic.
+func settle(m *Model, cmd tea.Cmd) {
+	rounds := 0
+	var run func(tea.Cmd)
+	run = func(cmd tea.Cmd) {
+		for cmd != nil {
+			if rounds++; rounds > 1000 {
+				panic("settle: the commands do not end")
+			}
+			switch msg := cmd().(type) {
+			case nil, tea.QuitMsg:
+				return
+			case tea.BatchMsg:
+				for _, c := range msg {
+					run(c)
+				}
+				return
+			default:
+				_, cmd = m.Update(msg)
+			}
+		}
+	}
+	run(cmd)
 }
 
 // setup keeps the config file and the themes directory in dir.
 func setup(dir string, th theme.Theme) Setup {
 	return Setup{
-		Commands:   command.NewRegistry(command.Builtins()...),
-		Keys:       keymap.Default(),
-		Matchers:   []search.Matcher{search.Text{}, search.Fuzzy{}},
-		Config:     config.Default(),
-		ConfigPath: filepath.Join(dir, "config.toml"),
-		Theme:      th,
-		Themes:     theme.NewStore(filepath.Join(dir, "themes"), os.DirFS("../../themes")),
-		Version:    "v1.2.3",
+		Commands:    command.NewRegistry(command.Builtins()...),
+		Keys:        keymap.Default(),
+		Matchers:    []search.Matcher{search.Text{}, search.Fuzzy{}},
+		Config:      config.Default(),
+		ConfigPath:  filepath.Join(dir, "config.toml"),
+		SchemasPath: filepath.Join(dir, "schemas.toml"),
+		Theme:       th,
+		Themes:      theme.NewStore(filepath.Join(dir, "themes"), os.DirFS("../../themes")),
+		Version:     "v1.2.3",
 	}
 }
 
@@ -172,9 +208,32 @@ func TestValidationReportsErrors(t *testing.T) {
 	}
 }
 
+func TestControlCharactersDoNotReachTheTerminal(t *testing.T) {
+	dir := t.TempDir()
+	doc := document.New(filepath.Join(dir, "a\a\x1b]52;c;eA==\a.xml"), xml.Type())
+	m := New(doc, setup(dir, theme.Theme{}))
+	settle(m, m.Init())
+	resize(m, 80, 24)
+	if got, want := m.View().WindowTitle, "vex – a??]52;c;eA==?.xml"; got != want {
+		t.Errorf("window title = %q, want %q", got, want)
+	}
+	shown := map[string]string{"status bar": m.statusBar()}
+	m.Notify("Saved \x1b]52;c;eA==\a")
+	shown["notification"] = m.messageLine()
+	m.reportError(errors.New("cannot read \x1b]52;c;eA==\a.xsd"))
+	shown["error"] = m.messageLine()
+	m.Ask("Save \x1b]2;x\a?")
+	shown["question"] = m.messageLine()
+	for name, got := range shown {
+		if !strings.Contains(got, "?]") || strings.ContainsAny(got, "\a") || strings.Contains(got, "\x1b]") {
+			t.Errorf("%s = %q, want control characters as ?", name, got)
+		}
+	}
+}
+
 func TestHints(t *testing.T) {
 	m, _ := newModel(t, "<a/>")
-	if got, want := m.hints(), "i insert · ctrl+s save · f format · ctrl+f search · s settings · q quit"; got != want {
+	if got, want := m.hints(), "i insert · ctrl+s save · f format · ctrl+f search · s settings · q quit · v errors · V schema"; got != want {
 		t.Errorf("hints = %q, want %q", got, want)
 	}
 }

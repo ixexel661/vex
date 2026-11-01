@@ -82,7 +82,15 @@ vex file.xml
 vex opens the file in normal mode with syntax highlighting and line numbers.
 Press `i` to edit and `esc` to stop editing. A file that does not exist yet is
 created on the first save. The status bar shows whether the document is
-well-formed XML and, if not, the line of the first error.
+well-formed XML and, if not, the line of the first error. With an XSD schema,
+vex finds all errors against it, see [XSD schemas](#xsd-schemas).
+
+Large files open at once: vex checks the XML in the background, and the
+status bar shows `… checking` until it is done. It also highlights the rest
+of the file in the background, so `ctrl+end` does not have to wait. The
+search and long searches for tags, like the end tag for `>` or the element
+for `ctrl+down`, use all CPU cores. With 100 MB of XML, the first check takes
+about 3 seconds, and about 4 with a schema.
 
 ```sh
 vex new file.xml
@@ -100,6 +108,8 @@ open a file called `new`, use `vex ./new`.
 | normal | `i`                                   | start editing                             |
 | normal | `f`                                   | format (re-indent) the document           |
 | normal | `s`                                   | settings                                  |
+| normal | `v`                                   | list the errors against the schema        |
+| normal | `V`                                   | set the XSD schemas of the file           |
 | normal | `q`, `ctrl+c`                         | quit, asks first if there are changes     |
 | both   | `ctrl+s`                              | save                                      |
 | both   | `ctrl+f`                              | search                                    |
@@ -116,9 +126,12 @@ open a file called `new`, use `vex ./new`.
 The `ctrl` arrows put the cursor at the `<` of a tag. `ctrl+left` and
 `ctrl+right` stop at every start, end and empty tag, but not at tags in
 comments or CDATA. `ctrl+up` goes to the start tag of the element the cursor
-is in, so pressing it again climbs up to the root. `ctrl+down` goes the other
-way, from a start tag to its first child, and from outside of all elements
-to the root element.
+is in, so pressing it again climbs up to the root. If that start tag is more
+than 5,000 lines up, vex looks for it in the background and shows `… looking
+for the parent element` meanwhile. The cursor jumps once it is found, unless
+you moved it or changed the text. `ctrl+down` goes the other way, from a
+start tag to its first child, and from outside of all elements to the root
+element.
 
 Formatting changes the whitespace between tags and, if the settings ask for
 it, wraps long tags and shortens empty elements. Text is kept exactly as it
@@ -131,9 +144,12 @@ next indent stop, `shift+tab` takes one level off the start of the line, and
 In insert mode, the start and end tag of an element stay in step. With the
 cursor on a tag name, both names are marked, and typing or deleting in one
 of them changes the other one too. Characters that cannot be part of a name,
-like the space before an attribute, only go where you type them. Typing `>`
-at the end of a start tag adds its end tag right after it, with the cursor
-in between, unless the element has an end tag already.
+like the space before an attribute, only go where you type them. If the
+other tag is more than 5,000 lines away, like the end tag of the root
+element in a large file, vex looks for it in the background, and the names
+are marked and linked once it has found it. Typing `>` at the end of a start
+tag adds its end tag right after it, with the cursor in between, unless the
+element has an end tag already.
 
 ### Search
 
@@ -155,6 +171,50 @@ and `enter` use it.
 | `enter`         | close the search, the cursor stays        |
 | `esc`, `ctrl+c` | cancel, the cursor goes back              |
 | `tab`           | switch between text and fuzzy search      |
+
+### XSD schemas
+
+`V` opens a popup with the XSD schemas of the file, each a namespace and a
+schema file. Without schemas yet, vex fills it in from `xsi:schemaLocation`
+or `xsi:noNamespaceSchemaLocation` of the root element, or with the
+namespace of the root element. The namespace has to be the
+`targetNamespace` of the schema, or empty for a schema without one. A
+relative path starts in the directory of the XML file, and `~/` is the home
+directory. The schemas a schema imports or includes come along, so another
+schema is only needed for a namespace no schema imports, e.g. for elements
+in an `xs:any`.
+
+| Keys               | Action                                    |
+|--------------------|-------------------------------------------|
+| `up`/`down`        | select a field                            |
+| `tab`              | complete the path, like a shell does      |
+| `ctrl+n`, `ctrl+d` | add a schema, remove the selected one     |
+| `enter`            | load and save the schemas                 |
+| `esc`, `ctrl+c`    | cancel                                    |
+
+If the schemas do not load, `enter` keeps the popup open and says why.
+Otherwise vex saves them for the file in `~/.config/vex/schemas.toml`, next
+to the config file, and they are set again whenever the file opens. A new
+file without a name keeps them until vex quits.
+
+With schemas, every check of the document in the background also checks it
+against them. It finds all errors at once, up to 10,000. The status bar
+shows their number, like `✗ 12 XSD errors`, or `✓ XSD valid`. Each error is
+underlined in the text, its line number is red, and with the cursor in its
+line, the message line says what is wrong. While you type, the marks move
+with the text until the next check. `v` lists the errors above the status
+bar, starting with the first one after the cursor:
+
+| Keys            | Action                                     |
+|-----------------|--------------------------------------------|
+| `up`/`down`     | previous/next error, the cursor goes there |
+| `enter`         | close the list, the cursor stays           |
+| `esc`, `ctrl+c` | close the list, the cursor goes back       |
+
+As long as the document is not well-formed, only that error is marked. vex
+reads a schema file again when it has changed, with the next check or when
+you press `v`. It supports XSD 1.0 and only reads local files. A DTD in the
+document is skipped, but entities declared in it are not supported.
 
 ### Settings
 
@@ -249,9 +309,13 @@ internal/
   search/               text and fuzzy search
   filetype/             file type registry
     xml/                XML highlighter, formatter, validator and tag pairs
-  config/               settings and the config file
+  config/               settings, the config file and the schemas of each file
   theme/                styles and theme files
+  sample/               large documents for tests and benchmarks
 ```
+
+`go test -bench . ./internal/...` measures opening, checking, highlighting
+and searching documents of 10 and 100 MB, `-short` skips the large ones.
 
 ## Extending vex
 
@@ -262,8 +326,9 @@ internal/
 
 **A new file format:** create `internal/filetype/<format>` with a function
 returning a `filetype.Type`. Only fill in what the format supports
-(`Template`, `Highlighter`, `Formatter`, `Validator`, `Tags`), then register
-it in `main.go`. The first registered type is the one of `vex new`.
+(`Template`, `Highlighter`, `Formatter`, `Validator`, `Schemas`, `Tags`),
+then register it in `main.go`. The first registered type is the one of
+`vex new`.
 
 **A new search mode:** implement `search.Matcher` in `internal/search`, e.g.
 for regular expressions or XPath, and add it to the matchers in `main.go`.

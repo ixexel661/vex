@@ -10,6 +10,7 @@ import (
 
 	"github.com/ixexel661/vex/internal/document"
 	"github.com/ixexel661/vex/internal/filetype"
+	"github.com/ixexel661/vex/internal/printable"
 )
 
 var errUsage = errors.New("usage")
@@ -49,7 +50,7 @@ func createDocument(name string, fileTypes *filetype.Registry, in io.Reader, out
 
 // confirm asks a yes or no question. Anything but y or yes is no.
 func confirm(in io.Reader, out io.Writer, question string) bool {
-	fmt.Fprintf(out, "%s [y/N] ", question)
+	fmt.Fprintf(out, "%s [y/N] ", printable.String(question))
 	answer, _ := bufio.NewReader(in).ReadString('\n')
 	answer = strings.ToLower(strings.TrimSpace(answer))
 	return answer == "y" || answer == "yes"

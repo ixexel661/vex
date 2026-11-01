@@ -73,6 +73,11 @@ func TestHighlight(t *testing.T) {
 			want:  []string{"<![CDATA[a < b]]>:cdata"},
 		},
 		{
+			name:  "blocks that end with their line",
+			lines: []string{`<a x="1"`, `y='2'`, `><!DOCTYPE a>`, "<b>"},
+			want:  []string{`<:punct a:tag  :plain x:attr =:punct "1":string`, `y:attr =:punct '2':string`, `>:punct <!DOCTYPE a>:meta`, "<:punct b:tag >:punct"},
+		},
+		{
 			name:  "unclosed tag recovers",
 			lines: []string{"<a", "<b>"},
 			want:  []string{"<:punct a:tag", "<:punct b:tag >:punct"},

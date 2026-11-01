@@ -53,14 +53,18 @@ func (e *Editor) gutter(row int) string {
 	if row == e.cursor.Row {
 		style = e.theme.CurrentLineNumber
 	}
+	if _, ok := e.ProblemAt(row); ok {
+		style = e.theme.Error
+	}
 	return style.Render(fmt.Sprintf("%*d ", e.gutterWidth()-1, row+1))
 }
 
 // renderLine highlights a row. Later spans win where they cover the same
-// rune: the syntax comes first, then the tag pair, then the marks.
+// rune: the syntax comes first, then the problems, the tag pair and the
+// marks.
 func (e *Editor) renderLine(row int, pair []highlight.Span) string {
 	line := []rune(e.buffer().Line(row))
-	kinds := kindsOf(len(line), slices.Concat(e.highlights.Spans(e.buffer(), row), pair, e.marks[row]))
+	kinds := kindsOf(len(line), slices.Concat(e.highlights.Spans(e.buffer(), row), e.problemSpans(row), pair, e.marks[row]))
 	return e.paint(visible(e.cells(line), e.left, e.textWidth()), kinds)
 }
 

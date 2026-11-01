@@ -37,15 +37,40 @@ func badge(style lipgloss.Style, text string) string {
 }
 
 func (m *Model) validity() string {
-	if m.editor.Document().Type.Validator == nil {
+	doc := m.editor.Document()
+	if doc.Type.Validator == nil && doc.Type.Schemas == nil {
 		return ""
 	}
-	if m.validation.err == nil {
+	v := m.validation
+	switch {
+	case v.running:
+		return m.theme.Hint.Render("… checking")
+	case v.err != nil:
+		var syntaxErr *filetype.SyntaxError
+		if errors.As(v.err, &syntaxErr) {
+			return m.theme.Invalid.Render(fmt.Sprintf("✗ line %d", syntaxErr.Line))
+		}
+		return m.theme.Invalid.Render("✗ invalid")
+	case v.schemaErr != nil:
+		return m.theme.Invalid.Render("✗ schema")
+	case v.schema:
+		return m.schemaValidity(doc.Type.Schemas.Name())
+	default:
 		return m.theme.Valid.Render("✓ valid")
 	}
-	var syntaxErr *filetype.SyntaxError
-	if errors.As(m.validation.err, &syntaxErr) {
-		return m.theme.Invalid.Render(fmt.Sprintf("✗ line %d", syntaxErr.Line))
+}
+
+// schemaValidity counts the problems against the schemas.
+func (m *Model) schemaValidity(kind string) string {
+	n := len(m.editor.Problems())
+	switch {
+	case n == 0:
+		return m.theme.Valid.Render("✓ " + kind + " valid")
+	case n == 1:
+		return m.theme.Invalid.Render("✗ 1 " + kind + " error")
+	case n >= filetype.MaxProblems:
+		return m.theme.Invalid.Render(fmt.Sprintf("✗ %d+ %s errors", n, kind))
+	default:
+		return m.theme.Invalid.Render(fmt.Sprintf("✗ %d %s errors", n, kind))
 	}
-	return m.theme.Invalid.Render("✗ invalid")
 }

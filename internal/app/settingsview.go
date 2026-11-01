@@ -25,7 +25,7 @@ func (m *Model) settingsBox() string {
 		}
 		lines[i] = fmt.Sprintf("%s %-*s  ‹ %s ›", marker, labelWidth, r.label, r.value(m.cfg))
 	}
-	footer := "vex " + m.version + " · " + m.configLocation()
+	footer := "vex " + m.version + " · " + homeRelative(m.configPath)
 	width := lipgloss.Width(footer)
 	for _, line := range lines {
 		width = max(width, lipgloss.Width(line))
@@ -34,13 +34,12 @@ func (m *Model) settingsBox() string {
 	return m.popup("Settings", append(lines, "", m.theme.Hint.Render(footer)))
 }
 
-// configLocation is the path of the config file, with ~ for the home
-// directory.
-func (m *Model) configLocation() string {
+// homeRelative returns path with ~ for the home directory.
+func homeRelative(path string) string {
 	if home, err := os.UserHomeDir(); err == nil {
-		if rest, ok := strings.CutPrefix(m.configPath, home+string(filepath.Separator)); ok {
+		if rest, ok := strings.CutPrefix(path, home+string(filepath.Separator)); ok {
 			return filepath.Join("~", rest)
 		}
 	}
-	return m.configPath
+	return path
 }

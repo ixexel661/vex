@@ -30,13 +30,16 @@ func (Fuzzy) Find(lines Lines, query string) []Match {
 	if len(pattern) == 0 {
 		return nil
 	}
-	var found []scored
-	for row := range lines.LineCount() {
-		line := normalize(lines.Line(row), ignoreCase)
-		if positions := locate(line, pattern); positions != nil {
-			found = append(found, scored{Match{Row: row, Ranges: ranges(positions)}, score(line, positions)})
+	found := inChunks(lines.LineCount(), func(from, to int) []scored {
+		var found []scored
+		for row := from; row < to; row++ {
+			line := normalize(lines.Line(row), ignoreCase)
+			if positions := locate(line, pattern); positions != nil {
+				found = append(found, scored{Match{Row: row, Ranges: ranges(positions)}, score(line, positions)})
+			}
 		}
-	}
+		return found
+	})
 	// The sort is stable, so of two equally good lines the earlier one wins.
 	slices.SortStableFunc(found, func(a, b scored) int {
 		return cmp.Compare(b.score, a.score)

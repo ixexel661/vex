@@ -6,6 +6,7 @@ import (
 
 	"github.com/ixexel661/vex/internal/buffer"
 	"github.com/ixexel661/vex/internal/filetype"
+	"github.com/ixexel661/vex/internal/highlight"
 )
 
 // Tags reads tags with the lexer of the highlighter, so tags in comments,
@@ -88,7 +89,8 @@ func (Tags) Close(src filetype.Source, p buffer.Position) (string, bool) {
 
 // nameAt returns the tag name that p is in or right before or after.
 func nameAt(src filetype.Source, p buffer.Position) (part, bool) {
-	for _, pt := range lineParts(src, p.Row) {
+	parts, _ := appendParts(nil, nil, src.Line(p.Row), src.State(p.Row), p.Row, 1)
+	for _, pt := range parts {
 		if pt.isName() && pt.start <= p.Col && p.Col <= pt.end {
 			return pt, true
 		}
@@ -176,29 +178,25 @@ func backward(src filetype.Source, row int) iter.Seq[tag] {
 	}
 }
 
-// partsFrom returns the parts of the rows from row on, going down for a step
-// of 1 and up for -1. Going up, the parts of each row come last to first.
-func partsFrom(src filetype.Source, row, step int) iter.Seq[part] {
-	return func(yield func(part) bool) {
-		for r := row; r >= 0 && r < src.LineCount(); r += step {
-			parts := lineParts(src, r)
-			if step < 0 {
-				slices.Reverse(parts)
-			}
-			for _, p := range parts {
-				if !yield(p) {
-					return
-				}
-			}
-		}
+// appendParts lexes the line of a row from the state the highlighter has at
+// its start and appends its parts to dst, last to first for a step of -1. It
+// keeps the runes of the line in buf and returns it for the next row.
+func appendParts(dst []part, buf []rune, line string, state highlight.State, row, step int) ([]part, []rune) {
+	buf = appendRunes(buf[:0], line)
+	start := len(dst)
+	dst = lexParts(dst, buf, state)
+	for i := start; i < len(dst); i++ {
+		dst[i].row = row
 	}
+	if step < 0 {
+		slices.Reverse(dst[start:])
+	}
+	return dst, buf
 }
 
-// lineParts lexes a row from the state the highlighter has at its start.
-func lineParts(src filetype.Source, row int) []part {
-	parts := lex([]rune(src.Line(row)), src.State(row)).parts
-	for i := range parts {
-		parts[i].row = row
+func appendRunes(buf []rune, s string) []rune {
+	for _, r := range s {
+		buf = append(buf, r)
 	}
-	return parts
+	return buf
 }

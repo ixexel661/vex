@@ -18,13 +18,15 @@ func (Text) Find(lines Lines, query string) []Match {
 	if len(pattern) == 0 {
 		return nil
 	}
-	var matches []Match
-	for row := range lines.LineCount() {
-		for _, col := range occurrences(normalize(lines.Line(row), ignoreCase), pattern) {
-			matches = append(matches, Match{Row: row, Ranges: []Range{{Start: col, End: col + len(pattern)}}})
+	return inChunks(lines.LineCount(), func(from, to int) []Match {
+		var matches []Match
+		for row := from; row < to; row++ {
+			for _, col := range occurrences(normalize(lines.Line(row), ignoreCase), pattern) {
+				matches = append(matches, Match{Row: row, Ranges: []Range{{Start: col, End: col + len(pattern)}}})
+			}
 		}
-	}
-	return matches
+		return matches
+	})
 }
 
 // occurrences returns where pattern starts in line. The search goes on after

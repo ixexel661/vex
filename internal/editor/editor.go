@@ -4,6 +4,7 @@ import (
 	"github.com/ixexel661/vex/internal/buffer"
 	"github.com/ixexel661/vex/internal/config"
 	"github.com/ixexel661/vex/internal/document"
+	"github.com/ixexel661/vex/internal/filetype"
 	"github.com/ixexel661/vex/internal/highlight"
 	"github.com/ixexel661/vex/internal/theme"
 )
@@ -15,8 +16,11 @@ type Editor struct {
 	theme      theme.Theme
 	highlights *highlight.Cache
 	marks      map[int][]highlight.Span // by row
+	problems   []filetype.Problem       // sorted by position
 
 	linkedEditing bool
+	knownPair     *tagPair
+	farJump       *farJump
 
 	cursor  buffer.Position
 	goalCol int // the column vertical movement returns to on long enough lines
@@ -59,6 +63,7 @@ func (e *Editor) SetSize(width, height int) {
 func (e *Editor) SetText(text string) {
 	e.buffer().SetText(text)
 	e.highlights.Invalidate(0)
+	e.problems = nil
 	e.setCursor(e.buffer().Clamp(e.cursor))
 }
 

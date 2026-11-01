@@ -57,7 +57,22 @@ func TestLinkedEditing(t *testing.T) {
 			if got := withCursor(e); got != tt.want {
 				t.Errorf("text = %q, want %q", got, tt.want)
 			}
+			knownPairIsCurrent(t, e)
 		})
+	}
+}
+
+// knownPairIsCurrent checks that the pair the editor knows for the current
+// text is the one a new search finds.
+func knownPairIsCurrent(t *testing.T, e *Editor) {
+	t.Helper()
+	p := e.knownPair
+	if p == nil || p.version != e.buffer().Version() {
+		return
+	}
+	name, other, ok := e.doc.Type.Tags.Pair(e.source(), p.name.Start)
+	if name != p.name || other != p.other || ok != p.ok {
+		t.Errorf("known pair %v %v %v, a new search finds %v %v %v", p.name, p.other, p.ok, name, other, ok)
 	}
 }
 

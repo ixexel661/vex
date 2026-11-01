@@ -21,6 +21,7 @@ var kinds = map[string]highlight.Kind{
 	"match":         highlight.Match,
 	"current-match": highlight.CurrentMatch,
 	"linked-tag":    highlight.LinkedTag,
+	"problem":       highlight.Problem,
 }
 
 // ui maps the keys of the [ui] table of a theme file to the styles of t.

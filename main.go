@@ -17,6 +17,7 @@ import (
 	"github.com/ixexel661/vex/internal/filetype"
 	"github.com/ixexel661/vex/internal/filetype/xml"
 	"github.com/ixexel661/vex/internal/keymap"
+	"github.com/ixexel661/vex/internal/printable"
 	"github.com/ixexel661/vex/internal/search"
 	"github.com/ixexel661/vex/internal/theme"
 )
@@ -36,7 +37,7 @@ func main() {
 		os.Exit(2)
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "vex:", err)
+		fmt.Fprintln(os.Stderr, "vex:", printable.String(err.Error()))
 		os.Exit(1)
 	}
 }
@@ -65,16 +66,17 @@ func run(args []string) error {
 	th, themeErr := themes.Load(cfg.Theme)
 
 	model := app.New(doc, app.Setup{
-		Commands:   command.NewRegistry(command.Builtins()...),
-		Keys:       keymap.Default(),
-		Matchers:   []search.Matcher{search.Text{}, search.Fuzzy{}},
-		Config:     cfg,
-		ConfigPath: configPath,
-		Theme:      th,
-		Themes:     themes,
-		Warning:    errors.Join(installErr, configErr, themeErr),
-		NewFile:    isNew,
-		Version:    currentVersion(),
+		Commands:    command.NewRegistry(command.Builtins()...),
+		Keys:        keymap.Default(),
+		Matchers:    []search.Matcher{search.Text{}, search.Fuzzy{}},
+		Config:      cfg,
+		ConfigPath:  configPath,
+		SchemasPath: filepath.Join(dir, "schemas.toml"),
+		Theme:       th,
+		Themes:      themes,
+		Warning:     errors.Join(installErr, configErr, themeErr),
+		NewFile:     isNew,
+		Version:     currentVersion(),
 	})
 	_, err = tea.NewProgram(model).Run()
 	return err

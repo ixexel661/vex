@@ -18,6 +18,10 @@ type Context interface {
 	Prompt(label string, run func(ctx Context, text string) error)
 	OpenSearch()
 	OpenSettings()
+	// OpenSchemas edits the schemas the document is checked against,
+	// ShowProblems lists what is wrong in it against them.
+	OpenSchemas()
+	ShowProblems()
 	Quit()
 }
 

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"charm.land/lipgloss/v2"
 
+	"github.com/ixexel661/vex/internal/printable"
 	"github.com/ixexel661/vex/internal/search"
 )
 
@@ -26,7 +26,7 @@ func (m *Model) searchBar() string {
 }
 
 func (m *Model) searchInput() string {
-	query := printable(m.search.Query())
+	query := printable.String(m.search.Query())
 	if m.replaceQuery {
 		query = m.theme.Selected.Render(query)
 	}
@@ -44,28 +44,48 @@ func (m *Model) matchCount() string {
 	}
 }
 
+// listHeight is the height of the list above the status bar: the matches
+// of a search that ranks them, or the problems in the text.
 func (m *Model) listHeight() int {
-	if !m.searching || !m.search.Matcher().Ranked() {
-		return 0
+	count := 0
+	switch {
+	case m.problemList != nil:
+		count = len(m.editor.Problems())
+	case m.searching && m.search.Matcher().Ranked():
+		count = maxListRows
 	}
-	rows := min(maxListRows, m.height/3-1)
+	rows := min(maxListRows, m.height/3-1, count)
 	if rows < 1 {
 		return 0
 	}
 	return rows + 1
 }
 
-func (m *Model) matchList(height int) string {
-	matches, selected := m.search.Matches(), m.search.Selected()
-	visible := height - 1
-	first := min(max(selected-visible/2, 0), max(len(matches)-visible, 0))
-	numberWidth := len(strconv.Itoa(m.editor.Document().Buffer.LineCount()))
+func (m *Model) listView(height int) string {
+	if m.problemList != nil {
+		return m.problemListView(height)
+	}
+	return m.matchList(height)
+}
 
+func (m *Model) matchList(height int) string {
+	matches := m.search.Matches()
+	numberWidth := len(strconv.Itoa(m.editor.Document().Buffer.LineCount()))
+	return m.list(height, len(matches), m.search.Selected(), func(i int, selected bool) string {
+		return m.listRow(matches[i], numberWidth, selected)
+	})
+}
+
+// list draws count rows under a line, as many as fit in height, scrolled so
+// the selected one shows.
+func (m *Model) list(height, count, selected int, row func(i int, selected bool) string) string {
+	visible := height - 1
+	first := min(max(selected-visible/2, 0), max(count-visible, 0))
 	rows := make([]string, height)
 	rows[0] = m.theme.Filler.Render(strings.Repeat("─", m.width))
 	for y := 1; y < height; y++ {
-		if i := first + y - 1; i < len(matches) {
-			rows[y] = m.listRow(matches[i], numberWidth, i == selected)
+		if i := first + y - 1; i < count {
+			rows[y] = row(i, i == selected)
 		}
 	}
 	return strings.Join(rows, "\n")
@@ -81,10 +101,10 @@ func (m *Model) listRow(match search.Match, numberWidth int, selected bool) stri
 	row := number.Render(fmt.Sprintf("%*d  ", numberWidth, match.Row+1))
 	for _, r := range match.Ranges {
 		start, end := max(r.Start, pos), max(r.End, pos)
-		row += text.Render(printable(string(line[pos:start]))) + matched.Render(printable(string(line[start:end])))
+		row += text.Render(printable.String(string(line[pos:start]))) + matched.Render(printable.String(string(line[start:end])))
 		pos = end
 	}
-	row += text.Render(printable(string(line[pos:])))
+	row += text.Render(printable.String(string(line[pos:])))
 	if selected {
 		row += text.Render(strings.Repeat(" ", max(m.width-lipgloss.Width(row), 0)))
 	}
@@ -98,17 +118,4 @@ func indentation(line []rune) int {
 		n++
 	}
 	return n
-}
-
-func printable(s string) string {
-	return strings.Map(func(r rune) rune {
-		switch {
-		case r == '\t':
-			return ' '
-		case unicode.IsControl(r):
-			return '?'
-		default:
-			return r
-		}
-	}, s)
 }
